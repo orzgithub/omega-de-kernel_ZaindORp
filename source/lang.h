@@ -97,6 +97,8 @@ extern char* gl_save_saved;
 extern char* gl_file_exist;
 extern char* gl_file_noexist;
 
+extern char* gl_savbak;
+
 extern char**  	gl_rom_menu;
 extern char**   gl_nor_op;
 

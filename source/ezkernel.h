@@ -34,6 +34,7 @@ typedef enum {
 	SET_win=2,
 	SET2_win=3,
 	HELP=4,
+	SET_sbak=5,
 }PAGE_NUM ;
 //----------------------------
 extern DWORD Get_NextCluster(	FFOBJID* obj,	DWORD clst);

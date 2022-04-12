@@ -96,9 +96,12 @@ char* gl_save_loaded;
 char* gl_save_saved;
 char* gl_file_exist;
 char* gl_file_noexist;
+
+char* gl_savbak;
 //--
 char**  gl_rom_menu;
 char**  gl_nor_op;
+
 
 
 //中文
@@ -195,6 +198,8 @@ const char zh_save_saved[]="存档已保存到SD";
 const char zh_file_exist[]="文件存在,覆盖吗?";
 const char zh_file_noexist[]="找不到存档文件";
 
+const char zh_savbak[]="启用存档备份吗？";
+
 const char *zh_rom_menu[]={
 	"直接启动",
 	"启动带辅助",
@@ -218,7 +223,7 @@ const char en_init_error[]="Micro SD card initial error";
 const char en_power_off[]="Power off";
 const char en_init_ok[]="Micro SD card initial OK";
 const char en_Loading[]="Loading...";
-const char en_file_overflow[]="File overflow,load to NOR";
+const char en_file_overflow[]="File overflow,please load to NOR";
 
 const char en_menu_btn[]="[B]CANCEL    [A]OK";
 const char en_writing[]="WRITING...";
@@ -306,6 +311,8 @@ const char en_save_loaded[]="Sav have been loaded";
 const char en_save_saved[]="Sav have been saved";
 const char en_file_exist[]="File exist，cover it?";
 const char en_file_noexist[]="Cnt not find sav file";
+
+const char en_savbak[]="Enable the save file backup?";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",
@@ -422,7 +429,8 @@ void LoadChinese(void)
 	//
 	gl_rom_menu = (char**)zh_rom_menu;
 	gl_nor_op = (char**)zh_nor_op;
-
+	
+	gl_savbak = (char*)zh_savbak;
 }
 //---------------------------------------------------------------------------------
 void LoadEnglish(void)
@@ -521,4 +529,6 @@ void LoadEnglish(void)
 	//
 	gl_rom_menu = (char**)en_rom_menu;
 	gl_nor_op = (char**)en_nor_op;
+	
+	gl_savbak = (char*)en_savbak;
 }

@@ -43,6 +43,8 @@ TCHAR currentpath[MAX_path_len];//
 TCHAR currentpath_temp[MAX_path_len];
 TCHAR current_filename[200];
 
+TCHAR plugin[100]; //pogoshell plugin
+
 u8 p_folder_select_show_offset[100]EWRAM_BSS;
 u8 p_folder_select_file_select[100]EWRAM_BSS;
 u32 folder_select;
@@ -464,6 +466,35 @@ void IWRAM_CODE Refresh_filename(u32 show_offset,u32 file_select,u32 updown,u32 
 			DrawHZText12(msg,0,208,showy2, name_color1,1);
 		}
 	}
+}
+//---------------------------------------------------------------------------------
+u32 set_savbak(){
+	DrawHZText12(gl_savbak,0,60,28,gl_color_text,1);//use sure?gl_LSTART_help
+	Show_MENU_btn();
+	u16 keysdown;
+	u32 out;
+	while(1){
+		VBlankIntrWait();
+		scanKeys();
+		keysdown = keysDown();
+		if (keysdown & KEY_A) {
+			f_mkdir("/FLAGS");
+			f_open(&gfile, "/FLAGS/SAVBAK", FA_WRITE | FA_CREATE_ALWAYS);
+			f_close(&gfile);
+		}
+		else if(keysdown & KEY_B){
+			f_unlink("/FLAGS/SAVBAK");
+		}
+		else if(keysdown & KEY_L){
+			out = 0;
+			break;
+		}
+		else if(keysdown & KEY_R){
+			out = 1;
+			break;
+		}
+	}
+	return out;
 }
 //---------------------------------------------------------------------------------
 void Show_ICON_filename_NOR(u32 show_offset,u32 file_select)
@@ -1179,13 +1210,13 @@ u32 SavefileWrite(TCHAR *filename,u32 savesize)
 				{
 		      f_write(&file, pReadCache, 0x200*4, &written);
 		      if(written != 0x200*4) break;
-		    }
+			    }
 		  }
 	    
 	    f_close(&file);
 
 	     return 1;
-    }
+	    }
     break;
     default:
 			return false;
@@ -1436,17 +1467,108 @@ void ShowTime(u32 page_num ,u32 page_mode)
 	DrawHZText12(msgtime,0,120,3,gl_color_text,1);
 }
 //---------------------------------------------------------------
+void IWRAM_CODE make_pogoshell_arguments(TCHAR *cmdname, TCHAR *filename, u32 cmdsize, u32 filesize, u32 Address, u32 offset)
+{
+	u32 *p, addr;
+	char *ptr, *cmdptr, *fileptr;
+	int i = 0;
+
+	addr = 0x08000000 + cmdsize;
+
+	p = (u32 *)(0x02000000+255*1024);
+
+	p[0] = 0xFAB0BABE; //magic value in IWRAM
+
+	ptr = (char *)&p[2];
+	*ptr++ = '/';
+	cmdptr = ptr;
+
+	if (strlen(cmdname) > 31) {
+		TCHAR *ext = strrchr(cmdname, '.');
+		if (!ext) {
+			memcpy(ptr,cmdname,31);
+			ptr[31]='\0';
+		} else {
+			if (strlen(ext) > 31) {
+				memcpy(ptr,ext,31);
+				ptr[31]='\0';
+			} else {
+				int extlen=strlen(ext);
+				memcpy(ptr,cmdname,31-extlen);
+				memcpy(ptr+31-extlen,ext,extlen+1);
+			}
+		}
+	} else
+		strcpy(ptr, cmdname);
+
+	ptr += (strlen(ptr)+1);
+
+	*ptr++ = '/';
+	fileptr = ptr;
+
+	if (strlen(filename) > 31) {
+		TCHAR *ext = strrchr(filename, '.');
+		if (!ext) {
+			memcpy(ptr,filename,31);
+			ptr[31]='\0';
+		} else {
+			if (strlen(ext) > 31) {
+				memcpy(ptr,ext,31);
+				ptr[31]='\0';
+			} else {
+				int extlen=strlen(ext);
+				memcpy(ptr,filename,31-extlen);
+				memcpy(ptr+31-extlen,ext,extlen+1);
+			}
+		}
+	} else
+		strcpy(ptr, filename);
+
+	ptr += (strlen(ptr)+1);
+
+	*ptr++ = '\0';
+
+	p[1] = 2; // argc
+
+	p[-1] = addr; //addr of file
+	p[-2] = filesize;
+
+	// Make fake Pogoshell filesize
+	//
+	// Passed in 32KB aligned
+	offset = offset + 0x08000000 + 8;
+
+	p = pReadCache;
+
+	// Magic value in ROM address space
+	*p++ = 0xFAB0BABE;
+	*p++ = (2*(32+4+4)) | 0x80000000;
+
+	memcpy(p, cmdptr, 32);
+	p+=32/4;
+	*p++ = cmdsize;
+	*p++ = 0x08000000 - offset;
+
+	memcpy(p, fileptr, 32);
+
+	p+=32/4;
+	*p++ = filesize;
+	*p++ = addr - offset;
+
+	dmaCopy((void*)pReadCache,PSRAMBase_S98 + Address, 0x58);
+}
+//---------------------------------------------------------------
 u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 {
 	UINT  ret;
 	u32 filesize;
 	u32 res;
-	u32 blocknum;
+	u32 blocknum, blockoffset=0;
 	char msg[20];
 	
 	u32 Address;
 	vu16 page=0;
-	SetPSRampage(page);
+	SetPSRampage(0);
 	
 	u32 rom_start_address=0;
 	switch(is_EMU)
@@ -1463,6 +1585,36 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 			rom_start_address = pocketnes_gba_size+0x30;
 			break;
 		default:
+			res = f_open(&gfile, plugin, FA_READ);
+			if(res != FR_OK)
+				return 1;
+			filesize = f_size(&gfile);
+			f_lseek(&gfile, 0x0000);
+			for(blocknum=0x0000;blocknum<filesize;blocknum+=0x20000)
+			{		
+				sprintf(msg,"%luMb",(blocknum)/0x20000);
+				Clear(78+54,160-15,110,15,gl_color_cheat_black,1);
+				DrawHZText12(msg,0,78+54,160-15,gl_color_text,1);
+				//f_lseek(&gfile, blocknum);
+				if (filesize-blocknum*0x20000 < 0x20000)
+					memset(pReadCache, 0, 0x20000);
+				f_read(&gfile, pReadCache, 0x20000, &ret);//pReadCache max 0x20000 Byte
+				page = 0;
+						
+				Address=blocknum;
+				while(Address>=0x400000)
+				{
+					Address-=0x400000;
+					page+=0x800;
+				}
+				SetPSRampage(page);
+				dmaCopy((void*)pReadCache,PSRAMBase_S98 + Address, 0x20000);
+			}
+			f_close(&gfile);
+			SetPSRampage(0);
+			blockoffset=blocknum;
+			// Guarantee word alignment
+			rom_start_address = (filesize+3)&~3;
 			break;	
 	}
 	
@@ -1481,8 +1633,11 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 			*(vu32*)pReadCache = 0x709346c0;//usr rtc
 			dmaCopy((void*)pReadCache,PSRAMBase_S98 + 0x1EA0, 0x4);	
 			
+			*(vu32*)pReadCache = 0x46c046c0;
+			dmaCopy((void*)pReadCache,PSRAMBase_S98 + 0x57de, 0x4);	//exit no sram write
+			dmaCopy((void*)pReadCache,PSRAMBase_S98 + 0x57ea, 0x4);
 		}
-		else{
+		else if (is_EMU==2 || is_EMU==1) {
 			//use rtc, have been modify			
 		}
 
@@ -1493,33 +1648,45 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 		f_lseek(&gfile, 0x0000);
 		for(blocknum=0x0000;blocknum<filesize;blocknum+=0x20000)
 		{		
-			sprintf(msg,"%luMb",(blocknum)/0x20000);
+			sprintf(msg,"%luMb",(blocknum+blockoffset)/0x20000);
 			Clear(78+54,160-15,110,15,gl_color_cheat_black,1);
 			DrawHZText12(msg,0,78+54,160-15,gl_color_text,1);
 			//f_lseek(&gfile, blocknum);
+			if (filesize-blocknum*0x20000 < 0x20000)
+				memset(pReadCache, 0, 0x20000);
 			f_read(&gfile, pReadCache, 0x20000, &ret);//pReadCache max 0x20000 Byte
-						
+			
+			page = 0;
+				
 			Address=blocknum;
-			while(Address>=0x800000)
+			while(Address>=0x400000)
 			{
-				Address-=0x800000;
-				page+=0x1000;
+				Address-=0x400000;
+				page+=0x800;
 			}
 			SetPSRampage(page);
 			dmaCopy((void*)pReadCache,PSRAMBase_S98 + rom_start_address + Address, 0x20000);
 			
-			page = 0;
 		}
 		f_close(&gfile);
+		Clear(78+54,160-15,110,15,gl_color_cheat_count,1);
+		if (is_EMU > 3) {
+			Address = rom_start_address + filesize;
+		      	Address = (Address + 0x7fff)&~0x7fff;
+			u32 offset = Address;
+			while(Address>=0x400000)
+			{
+				Address-=0x400000;
+				page+=0x800;
+			}
+			SetPSRampage(page);
+			make_pogoshell_arguments(plugin + 9, filename, rom_start_address, filesize, Address, offset);
+		}
 		SetPSRampage(0);
+		Clear(78+54,160-15,110,15,gl_color_text,1);
 		return 0;
 	}
-	else
-	{
-		return 1;
-	}	
-	
-	return 0;
+	return 1;
 }
 //---------------------------------------------------------------------------------
 extern u16 SET_info_buffer [0x200]EWRAM_BSS;
@@ -1643,28 +1810,51 @@ void SD_list_L_START(u32 show_offset,u32 file_select,u32 folder_total)
 //---------------------------------------------------------------------------------
 u32 Check_file_type(TCHAR *pfilename)
 {
-	u32 strlen8 = strlen(pfilename) ;
-	//u32 is_EMU;
-	if(!strcasecmp(&(pfilename[strlen8-3]), "gba"))
-	{
-		return 0;
-	}	
-	else if(!strcasecmp(&(pfilename[strlen8-3]), "gbc"))
-	{
-    return 1;
-	}
-	else if(!strcasecmp(&(pfilename[strlen8-2]), "gb"))
-	{
-    return 2;
-	}
-	else if(!strcasecmp(&(pfilename[strlen8-3]), "nes"))
-	{
-    return 3;
-	}
-	else 
-	{
+	u32 res;	
+	TCHAR *ext = strrchr(pfilename, '.');
+	TCHAR *p;
+	
+
+	if (!ext)
 		return 0xff;
+
+	ext++;
+
+	sprintf(plugin, "/plugins/%s.bin", ext);
+	res = f_stat(plugin, NULL);
+	if(res == FR_OK)
+		return 4;
+	sprintf(plugin, "/plugins/%s.gba", ext);
+	res = f_stat(plugin, NULL);
+	if(res == FR_OK)
+		return 5;
+	sprintf(plugin, "/plugins/%s.mb", ext);
+	res = f_stat(plugin, NULL);
+	if(res == FR_OK)
+		return 6;
+	sprintf(plugin, "/plugins/%s.mbz", ext);
+	res = f_stat(plugin, NULL);
+	if(res == FR_OK)
+		return 7;
+		
+	//u32 is_EMU;
+	if(!strcasecmp(ext, "gba"))
+	{
+			return 0;
 	}	
+	else if(!strcasecmp(ext, "gbc"))
+	{
+			return 1;
+	}
+	else if(!strcasecmp(ext, "gb"))
+	{
+			return 2;
+	}
+	else if(!strcasecmp(ext, "nes"))
+	{
+			return 3;
+	}
+	return 0xff;
 }
 //---------------------------------------------------------------------------------
 void Show_error_num(u8 error_num)
@@ -1728,7 +1918,7 @@ u8 Process_savefile(u32 is_EMU,TCHAR *pfilename,u32 gamefilesize,BYTE saveMODE)
 	u32 res;
 	u32 savefilesize=0;	
 	TCHAR savfilename[100];
-	u32 strlen8;
+	u32 strlen8 = strlen(savfilename) ;
 	
 	res=f_chdir(SAVER_FOLDER);	
 	if(res != FR_OK){
@@ -1736,25 +1926,13 @@ u8 Process_savefile(u32 is_EMU,TCHAR *pfilename,u32 gamefilesize,BYTE saveMODE)
 	}
 	
 	memcpy(savfilename,pfilename,100);
-	strlen8 = strlen(savfilename);		
-	if(is_EMU){
-		if(is_EMU ==2){//gb
-			(savfilename)[strlen8-2] = 'e';
-			(savfilename)[strlen8-1] = 's';
-			(savfilename)[strlen8-0] = 'v';		
-			(savfilename)[strlen8+1] = 0;	
-		}		
-		else{
-			(savfilename)[strlen8-3] = 'e';
-			(savfilename)[strlen8-2] = 's';
-			(savfilename)[strlen8-1] = 'v';
-		}	
-	}
-	else{//gba		
-		(savfilename)[strlen8-3] = 's';
-		(savfilename)[strlen8-2] = 'a';
-		(savfilename)[strlen8-1] = 'v';
-	}
+	TCHAR *saveext = strrchr(savfilename, '.');
+		if (saveext == NULL)
+			saveext = savfilename + strlen(savfilename);
+		if (is_EMU)
+			sprintf(saveext, ".esv");
+		else
+			sprintf(saveext, ".sav");
 	//#ifdef DEBUG
 		//DEBUG_printf("sav %s",savfilename);
 		//DEBUG_printf("saveMODE %x",saveMODE);	
@@ -1797,7 +1975,7 @@ u8 Process_savefile(u32 is_EMU,TCHAR *pfilename,u32 gamefilesize,BYTE saveMODE)
 
 	FAT_table_buffer[0x1F0/4] = gamefilesize;//size
 	FAT_table_buffer[0x1F4/4] = DMA_COPY_MODE;  //rom copy to psram
-	FAT_table_buffer[0x1F8/4] = (&EZcardFs)->csize;//0x40;  //secort of cluster
+		FAT_table_buffer[0x1F8/4] = (&EZcardFs)->csize;//0x40;  //secort of cluster
 	FAT_table_buffer[0x1FC/4] = (saveMODE<<24) | savefilesize;  //save mode and save file size
 	//DEBUG_printf(" %08X %08X ", FAT_table_buffer[0],FAT_table_buffer[1]);
 	//DEBUG_printf(" %08X %08X ", FAT_table_buffer[2],FAT_table_buffer[3]);
@@ -1810,6 +1988,65 @@ u8 Process_savefile(u32 is_EMU,TCHAR *pfilename,u32 gamefilesize,BYTE saveMODE)
 	return 0;
 }
 //---------------------------------------------------------------------------------
+void Process_savbak(TCHAR* savname){
+	
+	const char* backup_dir = SAVER_BACKUP_FOLDER;
+	u8 temp_savname[MAX_path_len] = { 0 };
+	u8 temp_savname_dst[MAX_path_len] = { 0 };
+	u32 temp_savname_length;
+
+	strncpy(temp_savname, backup_dir, sizeof(temp_savname) - 2);
+	temp_savname_length = strlen(temp_savname);
+	temp_savname[temp_savname_length++] = '/';
+
+	strncpy(temp_savname + temp_savname_length, savname, sizeof(temp_savname) - temp_savname_length - 2);
+	temp_savname_length = strlen(temp_savname);
+
+	f_mkdir(backup_dir);
+	strncpy(temp_savname_dst, temp_savname, sizeof(temp_savname_dst));
+
+	temp_savname[temp_savname_length] = '.';
+	temp_savname[temp_savname_length+1] = 'b';
+	temp_savname[temp_savname_length+2] = 'a';
+	temp_savname[temp_savname_length+3] = 'k';
+	f_unlink(temp_savname);
+	{
+		u32 ret = 0;
+		UINT read_ret;
+		UINT write_ret;
+		u32 filesize;
+		u32 res;
+		u32 blocknum;
+		FIL dst_file;
+	
+		res = f_open(&gfile, savname, FA_READ);
+		if (res == FR_OK)
+		{
+			res = f_open(&dst_file, temp_savname, FA_WRITE | FA_CREATE_ALWAYS);
+			if (res == FR_OK)
+			{
+				filesize = f_size(&gfile);
+				f_lseek(&gfile, 0x0000);
+
+				for (blocknum = 0x0000; blocknum < filesize; blocknum += 0x20000)
+				{
+					f_read(&gfile, pReadCache, 0x20000, &read_ret);
+					f_write(&dst_file, pReadCache, read_ret, &write_ret);
+					if (write_ret != read_ret)
+						break;
+					else
+					ret = 1;
+				}
+
+				f_close(&dst_file);
+
+				if (!ret) f_unlink(temp_savname);
+			}
+			f_close(&gfile);
+		}
+	}
+}
+//---------------------------------------------------------------------------------
 void Check_save_flag(void)
 {
 	//check save
@@ -1819,29 +2056,36 @@ void Check_save_flag(void)
 	savefilesize = Read_sav_info(1)<<9;
 	if(readd==0x11)
 	{
-			//u32 res;     
+			//u32 res;  
 			register u32 loopwrite ;
 			DrawPic((u16*)gImage_SD, 0, 0, 240, 160, 0, 0, 1);
 			for(loopwrite=0;loopwrite<0x200/2;loopwrite++)
 			{
 				((u16*)SAV_info_buffer)[loopwrite] = Read_sav_info(loopwrite+2);
 			}				
-			DrawPic((u16*)gImage_MENU, 56, 25, 128, 110, 0, 0, 1);//show menu pic		
+			DrawPic((u16*)gImage_MENU, 36, 25, 168, 110, 1, 0, 1);//show menu pic		
 			
 
-			DrawHZText12(gl_save_sav,0,60,28,gl_color_text,1);//use sure?gl_LSTART_help
-			DrawHZText12((TCHAR *)SAV_info_buffer,   20,60,40,0x7fff,1);//file name
-			DrawHZText12((TCHAR *)SAV_info_buffer+20,20,60,52,0x7fff,1);//file name
-			DrawHZText12((TCHAR *)SAV_info_buffer+40,20,60,64,0x7fff,1);//file name
+			DrawHZText12(gl_save_sav,0,47,28,gl_color_text,1);//use sure?gl_LSTART_help
+			DrawHZText12((TCHAR *)SAV_info_buffer,   20,47,40,gl_color_text,1);//file name
+			DrawHZText12((TCHAR *)SAV_info_buffer+20,20,47,52,gl_color_text,1);//file name
+			DrawHZText12((TCHAR *)SAV_info_buffer+40,20,47,64,gl_color_text,1);//file name
 			//DrawHZText12(gl_formatnor_info,5,60,90,gl_color_text,1);//use sure?
 			
-			if(gl_auto_save_sel){
-					DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
+		scanKeys();
+		u16 keysdown  = keysDown();
+			
+		if((gl_auto_save_sel) & !(keysdown & KEY_L)){
+								DrawHZText12(gl_save_ing,0,47,88,gl_color_text,1);//use sure?gl_LSTART_help
 					f_mkdir(SAVER_FOLDER);//"/SAVER"
 					f_chdir(SAVER_FOLDER); 
-					Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);			
+			if(f_open(&gfile,"/FLAGS/SAVBAK", FA_OPEN_EXISTING) == FR_OK){
+				f_close(&gfile);
+				Process_savbak((TCHAR *)SAV_info_buffer);
 			}
-			else{
+						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);	
+		}
+				else if (!(keysdown & KEY_L)){
 				Show_MENU_btn();
 				while(1){
 					VBlankIntrWait();
@@ -1851,6 +2095,10 @@ void Check_save_flag(void)
 						DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 						f_mkdir(SAVER_FOLDER);
 						f_chdir(SAVER_FOLDER);
+					if(f_open(&gfile,"/FLAGS/SAVBAK", FA_OPEN_EXISTING) == FR_OK){
+						f_close(&gfile);
+						Process_savbak((TCHAR *)SAV_info_buffer);
+					}
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);
 						/*TCHAR bmpfilename[100];	
 						u32 bmpnum;
@@ -1868,7 +2116,7 @@ void Check_save_flag(void)
 					}
 				}
 			}
-			memset(SAV_info_buffer,0x00,sizeof(SAV_info_buffer));//clean flag
+				memset(SAV_info_buffer,0x00,sizeof(SAV_info_buffer));//clean flag
 			Save_sav_info(SAV_info_buffer,0x200);				
 
 	}
@@ -2110,8 +2358,8 @@ re_showfile:
 						DrawPic((u16*)gImage_NOR, 0, 0, 240, 160, 0, 0, 1);
 						page_num = NOR_list;//NOR
 					}
-					else{
-						DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
+					else if(res==1){
+							DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET2_win;//
 					}
 					goto re_showfile;
@@ -2119,7 +2367,7 @@ re_showfile:
 	    	else if(page_num==SET2_win)//set2 windows
 	    	{
 					DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
-					res =Setting_window2();
+						res =Setting_window2();
 					if(res==0){
 						DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET_win;//set1
@@ -2133,13 +2381,31 @@ re_showfile:
 	    	else if(page_num==HELP)//HELP windows
 	    	{
 					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
-					Show_help_window();
-					DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
-					page_num = SET2_win;//	
+					res = Show_help_window();
+					if(res==0){
+						DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
+						page_num = SET2_win;//set2
+					}
+					else{
+						DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
+						page_num = SET_sbak;//SAVEBAK
+					}
+					
 					goto re_showfile;
 	    	}
-	    	else
-	    	{    		
+	    	else if(page_num==SET_sbak){
+				res = set_savbak();
+				if(res==0){
+					DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
+					page_num = HELP;//HELP
+				}
+				else{
+					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
+					page_num = SET_sbak;//SAVEBAK
+				}
+				goto re_showfile;
+	    	}
+	    	else{    		
 	      	DrawPic((u16*)gImage_NOR, 0, 0, 240, 160, 0, 0, 1);
 	    		//ClearWithBG((u16*)gImage_NOR,0, 0, 90, 20, 1);  //  		
 	    		//ClearWithBG((u16*)gImage_NOR,185+6, 3, 6*7, 16, 1);
@@ -2271,7 +2537,7 @@ re_showfile:
 				key_L = 0;
 			}
 			else if(keysdown & KEY_R)
-			{			
+				{			
 	      if(page_num==HELP){continue;}
 				page_num ++;
 				if(page_num==NOR_list)DrawPic((u16*)gImage_NOR, 0, 0, 240, 160, 0, 0, 1);
@@ -2283,13 +2549,13 @@ re_showfile:
 			else if(keysdown & KEY_B)//return
 			{
 				if(page_num == SD_list)
-				{
+					{
 	   			//res = f_getcwd(currentpath, sizeof currentpath / sizeof *currentpath);
 	   			if(strcmp(currentpath,"/") !=0 ){		
 		    		dmaCopy(currentpath, currentpath_temp, MAX_path_len);
 		    		TCHAR *p=strrchr(currentpath_temp, '/');
 		    		memset(currentpath,0x00,MAX_path_len);
-		    		strncpy(currentpath, currentpath_temp, p-currentpath_temp);
+			    		strncpy(currentpath, currentpath_temp, p-currentpath_temp);
 		    		if(currentpath[0]==0) currentpath[0]='/';
 		    		
 						res=f_chdir(currentpath);
@@ -2301,7 +2567,7 @@ re_showfile:
 						
 						p_folder_select_show_offset[folder_select] = 0;//clean
 						p_folder_select_file_select[folder_select] = 0;//clean
-						if(folder_select){
+							if(folder_select){
 							folder_select--;
 						}												
 				    goto refind_file;
@@ -2863,6 +3129,9 @@ re_show_menu:
 		Send_FATbuffer(FAT_table_buffer,1);
 							
 		res=LoadEMU2PSRAM(pfilename,is_EMU);
+		int bootmode=(is_EMU > 3) ?
+			((is_EMU == 6) ? 2
+			: ((is_EMU == 7) ? 4 : 3)) : key_L;
 		SetRompageWithHardReset(0x200,key_L);
 		while(1);
 	}		

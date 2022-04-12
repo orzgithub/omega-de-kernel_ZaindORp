@@ -43,6 +43,8 @@
 
 #define SAVER_FOLDER "/SAVER"
 
+#define SAVER_BACKUP_FOLDER "/SAVER/BACKUP"
+
 #define  DMA_COPY_MODE 0X1
 #define  SET_PARAMETER_MODE  0x2
 
