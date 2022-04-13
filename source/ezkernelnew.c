@@ -2066,20 +2066,20 @@ void Check_save_flag(void)
 			{
 				((u16*)SAV_info_buffer)[loopwrite] = Read_sav_info(loopwrite+2);
 			}				
-			DrawPic((u16*)gImage_MENU, 36, 25, 168, 110, 1, 0, 1);//show menu pic		
+			DrawPic((u16*)gImage_MENU, 56, 25, 128, 110, 0, 0, 1);//show menu pic		
 			
 
-			DrawHZText12(gl_save_sav,0,47,28,gl_color_text,1);//use sure?gl_LSTART_help
-			DrawHZText12((TCHAR *)SAV_info_buffer,   20,47,40,gl_color_text,1);//file name
-			DrawHZText12((TCHAR *)SAV_info_buffer+20,20,47,52,gl_color_text,1);//file name
-			DrawHZText12((TCHAR *)SAV_info_buffer+40,20,47,64,gl_color_text,1);//file name
+			DrawHZText12(gl_save_sav,0,60,28,gl_color_text,1);//use sure?gl_LSTART_help
+			DrawHZText12((TCHAR *)SAV_info_buffer,   20,60,40,gl_color_text,1);//file name
+			DrawHZText12((TCHAR *)SAV_info_buffer+20,20,60,52,gl_color_text,1);//file name
+			DrawHZText12((TCHAR *)SAV_info_buffer+40,20,60,64,gl_color_text,1);//file name
 			//DrawHZText12(gl_formatnor_info,5,60,90,gl_color_text,1);//use sure?
 			
 		scanKeys();
 		u16 keysdown  = keysDown();
 			
 		if((gl_auto_save_sel) & !(keysdown & KEY_L)){
-								DrawHZText12(gl_save_ing,0,47,88,gl_color_text,1);//use sure?gl_LSTART_help
+								DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 					f_mkdir(SAVER_FOLDER);//"/SAVER"
 					f_chdir(SAVER_FOLDER); 
 			if(f_open(&gfile,"/FLAGS/SAVBAK", FA_OPEN_EXISTING) == FR_OK){
@@ -2386,11 +2386,11 @@ re_showfile:
 					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
 					res = Show_help_window();
 					if(res==0){
-						DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
+						DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET2_win;//set2
 					}
 					else{
-						DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
+						DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET_sbak;//SAVEBAK
 					}
 					
@@ -2399,11 +2399,11 @@ re_showfile:
 	    	else if(page_num==SET_sbak){
 				res = set_savbak();
 				if(res==0){
-					DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
+					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
 					page_num = HELP;//HELP
 				}
 				else{
-					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
+					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
 					page_num = SET_sbak;//SAVEBAK
 				}
 				goto re_showfile;
