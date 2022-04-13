@@ -1210,13 +1210,13 @@ u32 SavefileWrite(TCHAR *filename,u32 savesize)
 				{
 		      f_write(&file, pReadCache, 0x200*4, &written);
 		      if(written != 0x200*4) break;
-			    }
+		    }
 		  }
 	    
 	    f_close(&file);
 
 	     return 1;
-	    }
+    }
     break;
     default:
 			return false;
@@ -1840,21 +1840,24 @@ u32 Check_file_type(TCHAR *pfilename)
 	//u32 is_EMU;
 	if(!strcasecmp(ext, "gba"))
 	{
-			return 0;
+		return 0;
 	}	
 	else if(!strcasecmp(ext, "gbc"))
 	{
-			return 1;
+    return 1;
 	}
 	else if(!strcasecmp(ext, "gb"))
 	{
-			return 2;
+    return 2;
 	}
 	else if(!strcasecmp(ext, "nes"))
 	{
-			return 3;
+    return 3;
 	}
-	return 0xff;
+	else 
+	{
+		return 0xff;
+	}	
 }
 //---------------------------------------------------------------------------------
 void Show_error_num(u8 error_num)
@@ -1975,7 +1978,7 @@ u8 Process_savefile(u32 is_EMU,TCHAR *pfilename,u32 gamefilesize,BYTE saveMODE)
 
 	FAT_table_buffer[0x1F0/4] = gamefilesize;//size
 	FAT_table_buffer[0x1F4/4] = DMA_COPY_MODE;  //rom copy to psram
-		FAT_table_buffer[0x1F8/4] = (&EZcardFs)->csize;//0x40;  //secort of cluster
+	FAT_table_buffer[0x1F8/4] = (&EZcardFs)->csize;//0x40;  //secort of cluster
 	FAT_table_buffer[0x1FC/4] = (saveMODE<<24) | savefilesize;  //save mode and save file size
 	//DEBUG_printf(" %08X %08X ", FAT_table_buffer[0],FAT_table_buffer[1]);
 	//DEBUG_printf(" %08X %08X ", FAT_table_buffer[2],FAT_table_buffer[3]);
@@ -2056,7 +2059,7 @@ void Check_save_flag(void)
 	savefilesize = Read_sav_info(1)<<9;
 	if(readd==0x11)
 	{
-			//u32 res;  
+			//u32 res;     
 			register u32 loopwrite ;
 			DrawPic((u16*)gImage_SD, 0, 0, 240, 160, 0, 0, 1);
 			for(loopwrite=0;loopwrite<0x200/2;loopwrite++)
@@ -2116,7 +2119,7 @@ void Check_save_flag(void)
 					}
 				}
 			}
-				memset(SAV_info_buffer,0x00,sizeof(SAV_info_buffer));//clean flag
+			memset(SAV_info_buffer,0x00,sizeof(SAV_info_buffer));//clean flag
 			Save_sav_info(SAV_info_buffer,0x200);				
 
 	}
@@ -2359,7 +2362,7 @@ re_showfile:
 						page_num = NOR_list;//NOR
 					}
 					else if(res==1){
-							DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
+						DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET2_win;//
 					}
 					goto re_showfile;
@@ -2367,7 +2370,7 @@ re_showfile:
 	    	else if(page_num==SET2_win)//set2 windows
 	    	{
 					DrawPic((u16*)gImage_SET2, 0, 0, 240, 160, 0, 0, 1);
-						res =Setting_window2();
+					res =Setting_window2();
 					if(res==0){
 						DrawPic((u16*)gImage_SET, 0, 0, 240, 160, 0, 0, 1);
 						page_num = SET_win;//set1
@@ -2537,7 +2540,7 @@ re_showfile:
 				key_L = 0;
 			}
 			else if(keysdown & KEY_R)
-				{			
+			{			
 	      if(page_num==HELP){continue;}
 				page_num ++;
 				if(page_num==NOR_list)DrawPic((u16*)gImage_NOR, 0, 0, 240, 160, 0, 0, 1);
@@ -2549,13 +2552,13 @@ re_showfile:
 			else if(keysdown & KEY_B)//return
 			{
 				if(page_num == SD_list)
-					{
+				{
 	   			//res = f_getcwd(currentpath, sizeof currentpath / sizeof *currentpath);
 	   			if(strcmp(currentpath,"/") !=0 ){		
 		    		dmaCopy(currentpath, currentpath_temp, MAX_path_len);
 		    		TCHAR *p=strrchr(currentpath_temp, '/');
 		    		memset(currentpath,0x00,MAX_path_len);
-			    		strncpy(currentpath, currentpath_temp, p-currentpath_temp);
+		    		strncpy(currentpath, currentpath_temp, p-currentpath_temp);
 		    		if(currentpath[0]==0) currentpath[0]='/';
 		    		
 						res=f_chdir(currentpath);
@@ -2567,7 +2570,7 @@ re_showfile:
 						
 						p_folder_select_show_offset[folder_select] = 0;//clean
 						p_folder_select_file_select[folder_select] = 0;//clean
-							if(folder_select){
+						if(folder_select){
 							folder_select--;
 						}												
 				    goto refind_file;
