@@ -1571,6 +1571,13 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 	SetPSRampage(0);
 	
 	u32 rom_start_address=0;
+	
+	res = f_open(&gfile, plugin, FA_READ);
+	if(res = FR_OK){
+		f_close(&gfile);
+		is_EMU = 0xFF;
+	}
+	
 	switch(is_EMU)
 	{
 		case 1://gbc
@@ -1790,7 +1797,7 @@ void SD_list_L_START(u32 show_offset,u32 file_select,u32 folder_total)
 	Show_MENU_btn();
 
 	DrawHZText12(gl_LSTART_help,0,60,60,gl_color_text,1);//use sure?gl_LSTART_help
-	DrawHZText12(pFilename_buffer[show_offset+file_select-folder_total].filename,20,60,75,0x7fff,1);//file name
+	DrawHZText12(pFilename_buffer[show_offset+file_select-folder_total].filename,20,60,75,gl_color_text,1);//file name
 	DrawHZText12(gl_formatnor_info,5,60,90,gl_color_text,1);//use sure?
 	while(1){
 		VBlankIntrWait();
