@@ -29,6 +29,7 @@ void Show_ver(void)
 u32 Show_help_window()
 {
 	char msg[20];
+	u16 tapa = 0;
 	Show_ver();
 	if(gl_select_lang == 0xE1E1)//english
 	{
@@ -49,12 +50,17 @@ u32 Show_help_window()
 	DrawHZText12("L+START:",0,3,65, gl_color_selected,1);
 		DrawHZText12(gl_LSTART_help,0,52,65, gl_color_text,1);	
 	
+	DrawHZText12(gl_modver,0,3,134 ,gl_color_text,1);
+	
 	sprintf(msg,"Rev.%s",((Rev==0xB000)||(Rev==0xA000)) ? "B":"A");
 	DrawHZText12(msg,0,3,149, gl_color_text,1);	
 				
 	DrawHZText12(gl_online_manual,0,240-70-7,77, gl_color_text,1);
 	while(1)
 	{
+		if (tapa == 4){
+			gameMine();
+		}
 		VBlankIntrWait(); 	
 		scanKeys();
 		u16 keys = keysDown();
@@ -63,6 +69,9 @@ u32 Show_help_window()
 		}		
 		else if (keys & KEY_R){
 			return 1;
+		}
+		else if (keys & KEY_A){
+			tapa++;
 		}
 	}
 }
