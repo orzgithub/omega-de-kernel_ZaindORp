@@ -39,7 +39,7 @@ void IWRAM_CODE Clear(u16 x, u16 y, u16 w, u16 h, u16 c, u8 isDrawDirect)
 //******************************************************************************
 void IWRAM_CODE ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
 {
-	if(usetheme){
+	if(usetheme && pbg >= (u16*)gImage_Chinese_manual && pbg <= (u16*)(gImage_MENU + 0x6E00)){
 		UINT theme_ret;
 		u16 hstop = y;
 		u16 hstop_last = 0;
@@ -98,7 +98,7 @@ void IWRAM_CODE Real_ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawD
 //******************************************************************************
 void IWRAM_CODE DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
 {
-	if(usetheme && GFX != (pReadCache + 0x10036)){
+	if(usetheme && (u16*)GFX >= (u16*)gImage_Chinese_manual && (u16*)GFX <= (u16*)(gImage_MENU + 0x6E00)){
 		UINT theme_ret;
 		u16 lefth = h;
 		while(lefth != 0){
