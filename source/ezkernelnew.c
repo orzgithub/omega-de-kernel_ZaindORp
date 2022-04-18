@@ -23,6 +23,7 @@
 #include "showcht.h"
 #include "helpwindow.h"
 
+#include "images.h"
 
 #include "goomba.h"
 #include "pocketnes.h"
@@ -88,6 +89,11 @@ u16 gl_Breathing_B;
 u16 gl_SD_R;
 u16 gl_SD_G;
 u16 gl_SD_B;
+
+FIL themefile;
+u8 themereadbuffer[SKIN_BUFFER_SIZE]EWRAM_BSS;
+u8 usetheme = 0;
+
 
 
 //----------------------------------------
@@ -469,7 +475,7 @@ void IWRAM_CODE Refresh_filename(u32 show_offset,u32 file_select,u32 updown,u32 
 }
 //---------------------------------------------------------------------------------
 u32 set_savbak(){
-	DrawHZText12(gl_savbak,0,60,28,gl_color_text,1);//use sure?gl_LSTART_help
+	DrawHZText12(gl_savbak,0,20,28,gl_color_text,1);//use sure?gl_LSTART_help
 	Show_MENU_btn();
 	u16 keysdown;
 	u32 out;
@@ -490,6 +496,35 @@ u32 set_savbak(){
 			break;
 		}
 		else if(keysdown & KEY_R){
+			out = 1;
+			break;
+		}
+	}
+	return out;
+}
+//---------------------------------------------------------------------------------
+u32 set_usetheme() {
+	DrawHZText12(gl_settheme, 0, 20, 28, gl_color_text, 1);//use sure?gl_LSTART_help
+	Show_MENU_btn();
+	u16 keysdown;
+	u32 out;
+	while (1) {
+		VBlankIntrWait();
+		scanKeys();
+		keysdown = keysDown();
+		if (keysdown & KEY_A) {
+			f_mkdir("/FLAGS");
+			f_open(&gfile, "/FLAGS/USETHEME", FA_WRITE | FA_CREATE_ALWAYS);
+			f_close(&gfile);
+		}
+		else if (keysdown & KEY_B) {
+			f_unlink("/FLAGS/USETHEME");
+		}
+		else if (keysdown & KEY_L) {
+			out = 0;
+			break;
+		}
+		else if (keysdown & KEY_R) {
 			out = 1;
 			break;
 		}
@@ -2186,6 +2221,8 @@ int main(void) {
 
 	//check FW
 	Check_FW_update();	
+	
+	set_default_theme();
 		
 	DrawPic((u16*)gImage_splash, 0, 0, 240, 160, 0, 0, 1);	
 	CheckLanguage();	
@@ -2202,6 +2239,24 @@ int main(void) {
 	{
 		DrawHZText12(gl_init_ok,0,2,20, gl_color_cheat_black,1);
 		DrawHZText12(gl_Loading,0,2,33, gl_color_cheat_black,1);
+	}
+	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
+		f_close(&gfile);
+		UINT theme_ret;
+		usetheme = 1;
+		f_lseek(&themefile, 0x94410);
+		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
+		gl_color_text = (u16)*(themereadbuffer + 0x0);
+		gl_color_selectBG_sd = (u16)*(themereadbuffer + 0x2);
+		gl_color_selectBG_nor = (u16)*(themereadbuffer + 0x4);
+		gl_color_cheat_black = (u16)*(themereadbuffer + 0x6);
+		gl_color_saverr = (u16)*(themereadbuffer + 0x8);
+		gl_color_unknown = (u16)*(themereadbuffer + 0xA);
+		gl_color_MENU_btn = (u16)*(themereadbuffer + 0xC);
+		gl_color_selected = (u16)*(themereadbuffer + 0xE);
+		gl_color_cheat_count = (u16)*(themereadbuffer + 0x10);
+		gl_color_NORFULL = (u16)*(themereadbuffer + 0x12);
+		gl_color_btn_clean = (u16)*(themereadbuffer + 0x14);
 	}
 	VBlankIntrWait();	
 	
@@ -2411,7 +2466,19 @@ re_showfile:
 				}
 				else{
 					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
-					page_num = SET_sbak;//SAVEBAK
+					page_num = SET_USETHEME;//THEMESET
+				}
+				goto re_showfile;
+	    	}
+	    	else if(page_num==SET_USETHEME){
+				res = set_usetheme();
+				if(res==0){
+					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
+					page_num = SET_sbak;//SAVBAK
+				}
+				else{
+					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
+					page_num = SET_USETHEME;//THEMESET
 				}
 				goto re_showfile;
 	    	}

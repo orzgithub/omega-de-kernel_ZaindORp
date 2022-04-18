@@ -98,6 +98,7 @@ extern char* gl_file_exist;
 extern char* gl_file_noexist;
 
 extern char* gl_savbak;
+extern char* gl_settheme;
 
 extern char* gl_modver;
 

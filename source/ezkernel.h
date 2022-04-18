@@ -4,6 +4,9 @@
 #include "ff.h"
 #include "ez_define.h"
 
+extern FIL themefile;
+extern u8 themereadbuffer[SKIN_BUFFER_SIZE]EWRAM_BSS;
+extern u8 usetheme;
 
 typedef struct FM_NOR_FILE_SECT{////save to nor
 	char filename[100];	
@@ -35,6 +38,7 @@ typedef enum {
 	SET2_win=3,
 	HELP=4,
 	SET_sbak=5,
+	SET_USETHEME=6,
 }PAGE_NUM ;
 //----------------------------
 extern DWORD Get_NextCluster(	FFOBJID* obj,	DWORD clst);

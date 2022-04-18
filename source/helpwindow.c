@@ -11,6 +11,8 @@
 #include "draw.h"
 #include "Ezcard_OP.h"
 
+#include "images.h"
+
 
 
 extern u16 gl_select_lang;

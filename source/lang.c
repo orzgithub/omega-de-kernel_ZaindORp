@@ -99,6 +99,7 @@ char* gl_file_exist;
 char* gl_file_noexist;
 
 char* gl_savbak;
+char* gl_settheme;
 
 char* gl_modver;
 
@@ -203,8 +204,9 @@ const char zh_file_exist[]="文件存在,覆盖吗?";
 const char zh_file_noexist[]="找不到存档文件";
 
 const char zh_savbak[]="启用存档备份吗？";
+const char zh_settheme[] = "启用自定义主题吗?";
 
-const char zh_modver[]="Mod版本：V1";
+const char zh_modver[]="Mod版本：V2";
 
 const char *zh_rom_menu[]={
 	"直接启动",
@@ -319,8 +321,9 @@ const char en_file_exist[]="File exist，cover it?";
 const char en_file_noexist[]="Cnt not find sav file";
 
 const char en_savbak[]="Enable the save file backup?";
+const char en_settheme[] = "Use custom theme?";
 
-const char en_modver[]="Mod version:V1";
+const char en_modver[]="Mod version:V2";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",
@@ -439,6 +442,7 @@ void LoadChinese(void)
 	gl_nor_op = (char**)zh_nor_op;
 	
 	gl_savbak = (char*)zh_savbak;
+	gl_settheme = (char*)zh_settheme;
 	
 	gl_modver = (char*)zh_modver;
 }
@@ -541,6 +545,7 @@ void LoadEnglish(void)
 	gl_nor_op = (char**)en_nor_op;
 	
 	gl_savbak = (char*)en_savbak;
+	gl_settheme = (char*)en_settheme;
 	
 	gl_modver = (char*)en_modver;
 }

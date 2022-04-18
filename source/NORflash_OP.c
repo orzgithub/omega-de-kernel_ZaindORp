@@ -16,6 +16,8 @@
 #include "GBApatch.h"
 //#define DEBUG
 
+#include "images.h"
+
 extern FM_NOR_FS pNorFS[MAX_NOR]EWRAM_BSS;
 extern u8 pReadCache [MAX_pReadCache_size]EWRAM_BSS;
 extern u32 gl_currentpage;

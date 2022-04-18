@@ -14,6 +14,7 @@
 #include "draw.h"
 #include "Ezcard_OP.h"
 
+#include "images.h"
 
 extern u32 FAT_table_buffer[FAT_table_size/4]EWRAM_BSS;
 

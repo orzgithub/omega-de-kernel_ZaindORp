@@ -11,6 +11,7 @@
 #include "draw.h"
 #include "Ezcard_OP.h"
 
+#include "images.h"
 
 
 u16 auto_save_sel;

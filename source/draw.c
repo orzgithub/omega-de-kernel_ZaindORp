@@ -11,6 +11,8 @@
 #include "ezkernel.h"
 #include "draw.h"
 
+#include "images.h"
+
 int current_y = 1;
 extern u8 pReadCache [MAX_pReadCache_size]EWRAM_BSS;
 //******************************************************************************
@@ -37,6 +39,48 @@ void IWRAM_CODE Clear(u16 x, u16 y, u16 w, u16 h, u16 c, u8 isDrawDirect)
 //******************************************************************************
 void IWRAM_CODE ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
 {
+	if(usetheme){
+		UINT theme_ret;
+		u16 hstop = y;
+		u16 hstop_last = 0;
+		u16* p;
+		u16 yi, ww, hh;
+
+		if (isDrawDirect)
+			p = VideoBuffer;
+		else
+			p = Vcache;
+
+		hh = (y + h > 160) ? 160 : (y + h);
+		ww = (x + w > 240) ? (240 - x) : w;
+
+		yi = y;
+
+		while(hstop < hh){
+			if(((hh - hstop) * 240 * 2) > SKIN_BUFFER_SIZE){
+				f_lseek(&themefile, ((pbg - (u16*)gImage_Chinese_manual) * sizeof(u16)) + (240 * hstop * 2));
+				f_read(&themefile, themereadbuffer, 240 * (SKIN_BUFFER_SIZE / 240), &theme_ret);
+
+				hstop_last = hstop;
+				hstop += ((SKIN_BUFFER_SIZE / 2) / 240) ;
+			}
+			else{
+				f_lseek(&themefile, ((pbg - (u16*)gImage_Chinese_manual) * sizeof(u16)) + (240 * hstop * 2));
+				f_read(&themefile, themereadbuffer, 240 * (hh - hstop) * 2, &theme_ret);
+
+				hstop_last = hstop;
+				hstop = hh;
+			}
+			for (; yi < hstop; yi++)
+				dmaCopy((u16*)themereadbuffer - (240 * hstop_last) + yi * 240 + x, p + yi * 240 + x, ww * 2);
+		}
+	}
+	else
+		Real_ClearWithBG(pbg, x, y, w, h, isDrawDirect);
+}
+//******************************************************************************
+void IWRAM_CODE Real_ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
+{
 	u16 *p;
 	u16 yi,ww,hh;
     
@@ -53,6 +97,30 @@ void IWRAM_CODE ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect
 }
 //******************************************************************************
 void IWRAM_CODE DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
+{
+	if(usetheme && GFX != (pReadCache + 0x10036)){
+		UINT theme_ret;
+		u16 lefth = h;
+		while(lefth != 0){
+			if((lefth * w * 2) > SKIN_BUFFER_SIZE){
+				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
+				f_read(&themefile, themereadbuffer, w * ((SKIN_BUFFER_SIZE / 2) / w) * 2, &theme_ret);
+				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, ((SKIN_BUFFER_SIZE / 2) / w), isTrans, tcolor, isDrawDirect);
+				lefth -= ((SKIN_BUFFER_SIZE / 2) / w);
+			}
+			else{
+				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
+				f_read(&themefile, themereadbuffer, w * lefth * 2, &theme_ret);
+				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, lefth, isTrans, tcolor, isDrawDirect);
+				lefth = 0;
+			}
+		}
+	}
+	else
+		Real_DrawPic(GFX, x, y, w, h, isTrans, tcolor, isDrawDirect);
+}
+//******************************************************************************
+void IWRAM_CODE Real_DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
 {
 	u16 *p,c;
 	u16 xi,yi,ww,hh;

@@ -10,6 +10,8 @@
 #include "showcht.h"
 #include "draw.h"
 
+#include "images.h"
+
 
 FM_CHT_LINE tmpCHTFS ;
 
