@@ -216,8 +216,8 @@ MBC5RAMB:
  .if RUMBLE
 	ldr r1,=DoRumble
 	str r0,[r1]
-	@-----
-	cmp r0,#0x8
+ .if EZFLASH_DE_BUILD
+    cmp r0,#0x8
 	bne no_Rumble
 	STMFD   SP!, {R1-R3}
 	ldr 	r1,=0xD200
@@ -248,7 +248,7 @@ set_off:
 	LDMFD   SP!, {R1-R3}
 no_Rumble:
 	@--
-	
+ .endif
  .endif
 	b RamSelect
 

@@ -7,6 +7,8 @@
 @	#include "gbz80mac.h"
 @	#include "sgb.h"
 	
+    @.global _doing_hdma
+    
 	global_func _E0
 	global_func _E2
 	global_func _F0
@@ -681,7 +683,16 @@ _FF70W:@		SVBK - CGB Mode Only - WRAM Bank
 	str_ r1,memmap_tbl+52
 	ldr r1,=wram_W
 	str_ r1,writemem_tbl+52
+    
+wram_remap_pc:
+	ldr_ r1,lastbank
+	sub gb_pc,gb_pc,r1
+	stmfd sp!,{r0}
+	encodePC
+	ldmfd sp!,{r0}
+
 	mov pc,lr
+
 select_gbc_ram:
  .if RESIZABLE
 	ldr_ r1,gbc_exram
@@ -696,7 +707,8 @@ select_gbc_ram:
 	ldr r1,=wram_W_2
 	str_ r1,writemem_tbl+52
 
-	mov pc,lr
+	@mov pc,lr
+    b wram_remap_pc
  .if RESIZABLE
 add_exram_:
 	stmfd sp!,{r0-addy,lr}
@@ -783,22 +795,55 @@ FF55_W:	@HDMA5
 	bic r0,r0,#0x80
 	
 	@immediately steal cycles if it's not HDMA
-	bne not_general_dma
+	bne start_hdma
+    @ General DMA code below
+    @ Write HDMA cancel block here
+    ldrb_ r1,dma_blocks_total
+    cmp r1,#0
+    beq general_dma
+cancel_hdma:
+    stmfd sp!,{r0-r12,lr}
+    ldrb_ r0,dma_blocks_total
+    ldrb_ r1,dma_blocks_remaining
+    sub r0,r0,r1
+    lsls r0,r0,#4
+    blxne_long DoDma
+    ldmfd sp!,{r0-r12,lr}
+    
+    ldr r1,=_dma_blocks_total
+    mov r2,#0x00
+    strb r2,[r1]
+    
+    bx lr  @ I'm not sure if this is right or not
+general_dma:
+    @ Steal cycles
 	ldr_ r1,cyclesperscanline
 	cmp r1,#DOUBLE_SPEED
 	add r1,r0,#1
 	moveq r1,r1,lsl#1
 	mov r1,r1,lsl#(3 + CYC_SHIFT)
 	sub cycles,cycles,r1
-not_general_dma:
-	
-	stmfd sp!,{r3,lr}
+    
+    @ Immediately call DoDma
+    stmfd sp!,{r0-r12,lr}
 	add r0,r0,#1
 	mov r0,r0,lsl#4
-@	mov r11,r11
 	blx_long DoDma
-	ldmfd sp!,{r3,pc}
-@	bx lr
+	ldmfd sp!,{r0-r12,pc}
+    
+start_hdma:
+    ldrb_ r1,dmamode
+    cmp r1,#2
+    beq general_dma  @ For compatibility with Shantae and its multitude of speed hacks
+
+    @ HDMA code below
+    add r0,r0,#1
+    ldr r1,=_dma_blocks_remaining
+    ldr r2,=_dma_blocks_total
+    strb r0,[r1]
+    strb r0,[r2]
+    
+	bx lr
 	
 @r0 = dest, r1 = src, r2 = byteCount, r3 = dirtyMapBits
 	global_func copy_map_and_compare
@@ -1262,7 +1307,8 @@ FF54_R:	@HDMA4
 	ldrb_ r0,dma_dest
 	mov pc,lr
 FF55_R:	@HDMA5
-	mov r0,#0xFF
+    ldrb_ r0,dma_blocks_remaining
+    sub r0,r0,#1
 	mov pc,lr
 
 

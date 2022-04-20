@@ -2246,17 +2246,17 @@ int main(void) {
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
 		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
-		gl_color_text = (u16)*(themereadbuffer + 0x0);
-		gl_color_selectBG_sd = (u16)*(themereadbuffer + 0x2);
-		gl_color_selectBG_nor = (u16)*(themereadbuffer + 0x4);
-		gl_color_cheat_black = (u16)*(themereadbuffer + 0x6);
-		gl_color_saverr = (u16)*(themereadbuffer + 0x8);
-		gl_color_unknown = (u16)*(themereadbuffer + 0xA);
-		gl_color_MENU_btn = (u16)*(themereadbuffer + 0xC);
-		gl_color_selected = (u16)*(themereadbuffer + 0xE);
-		gl_color_cheat_count = (u16)*(themereadbuffer + 0x10);
-		gl_color_NORFULL = (u16)*(themereadbuffer + 0x12);
-		gl_color_btn_clean = (u16)*(themereadbuffer + 0x14);
+		gl_color_text = *(u16*)(themereadbuffer + 0x0);
+		gl_color_selectBG_sd = *(u16*)(themereadbuffer + 0x2);
+		gl_color_selectBG_nor = *(u16*)(themereadbuffer + 0x4);
+		gl_color_cheat_black = *(u16*)(themereadbuffer + 0x6);
+		gl_color_saverr = *(u16*)(themereadbuffer + 0x8);
+		gl_color_unknown = *(u16*)(themereadbuffer + 0xA);
+		gl_color_MENU_btn = *(u16*)(themereadbuffer + 0xC);
+		gl_color_selected = *(u16*)(themereadbuffer + 0xE);
+		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
+		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
+		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
 	}
 	VBlankIntrWait();	
 	

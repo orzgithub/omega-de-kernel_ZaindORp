@@ -1806,7 +1806,7 @@ _10:@	STOP	stops the processor until an (joypad) interrupt.
 @	subeq gb_pc,gb_pc,#1
 @	moveq cycles,#0
 @_noStop
-@	add gb_pc,gb_pc,#1
+	add gb_pc,gb_pc,#1
 	fetch 4
 
 	.ltorg

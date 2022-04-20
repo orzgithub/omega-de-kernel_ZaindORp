@@ -1850,10 +1850,6 @@ mode2_update_scroll:
 	
 @nowindow
 entermode0:
-@	ldrb r0,rendermode
-@	cmp r0,#0
-@	moveq r1,pc
-@	bxeq lr
 entermode0_:
 	mov r0,#0
 	strb_ r0,rendermode
@@ -4698,6 +4694,10 @@ FF69_W:	@BCPD - BG Color Palette Data
 	strb r0,[addy,r2]
 	tst r1,#0x80
 	addne r1,r1,#1
+    @Minucce's tweaks
+    andne r1, r1, #0x3F
+    orrne r1, r1, #0x80
+    
 	strneb_ r1,BCPS_index
 	bx lr
 @FF69_W	;BCPD - BG Color Palette Data
@@ -4745,6 +4745,10 @@ FF6B_W:	@OCPD - OBJ Color Palette Data
 	strb r0,[addy,r2]
 	tst r1,#0x80
 	addne r1,r1,#1
+    @ Minucce's tweaks
+    andne r1, r1, #0x3F
+    orrne r1,r1,#0x80
+    
 	strneb_ r1,OCPS_index
 	bx lr
 @FF6B_W	;OCPD - OBJ Color Palette Data
@@ -4938,7 +4942,7 @@ _scanline:
 g_scanline:	.byte 0 @scanline
 _lcdyc:
 	.byte 0 @lcdyc
-	.byte 0 @[unused] dma start address
+_dma_blocks_total:	.byte 0 @[unused] dma start address
 _bgpalette:
 	.byte 0 @bgpalette
 _ob0palette:
@@ -5001,7 +5005,8 @@ ui_border_visible:	.byte 0 @_ui_border_visible
 sgb_palette_number: .byte 0 @_sgb_palette_number
 gammavalue:	.byte 0 @_gammavalue
 darkness:	.byte 0 @_darkness
-	.byte 0
+_dma_blocks_remaining:	.byte 0
+
 
 _ui_border_cnt_bic:
 	.word 0 @ui_border_cnt_bic

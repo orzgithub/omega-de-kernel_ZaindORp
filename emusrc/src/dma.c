@@ -92,25 +92,6 @@ static __inline VRAM_CODE void SetDirtyTiles(int dest, int byteCount)
 		int firstBit = firstTileNumber / 2;
 		int lastBit = (lastTileNumber + 1) / 2;
 		SetBits((u32*)_dirty_tile_bits, firstBit, lastBit);
-
-		/*
-		u8 *dirtyTiles = _dirty_tiles;
-
-		memset(dirtyTiles + firstTileNumber, 0xFF, tileCount);
-
-		u8 *dirtyRows = _dirty_rows;
-		int firstRow = (dest - 0x8000) >> 8;
-		int lastRow = (dest + byteCount - 0x8000 + 255) >> 8;
-		for (int row = firstRow; row < lastRow; row++)
-		{
-			dirtyRows[row] = 0xFF;
-		}
-		*/
-	}
-	else
-	{
-		//mark background maps as dirty
-		//_set_bg_cache_full(1);
 	}
 }
 
@@ -119,14 +100,14 @@ void VRAM_CODE DoDma(int byteCountRemaining)
 	while (byteCountRemaining > 0)
 	{
 		//first do range and count checking to make memory blocks contiguous
-		
+	
 		int byteCount = byteCountRemaining;
 		byteCountRemaining = 0;
 		
 		int src = _dma_src;
 		
 		int srcEnd = src + byteCount;
-		int srcEndBlock = (srcEnd - 1) & 0xF000;
+		int srcEndBlock = (srcEnd - 1) & 0xF000;  // What do all these hex values mean
 		int srcBlock = src & 0xF000;
 		
 		if (src < 0x8000)
@@ -156,10 +137,10 @@ void VRAM_CODE DoDma(int byteCountRemaining)
 		u8 *sourceAddress = GetRealAddress(src);
 		
 		
-		if (_dmamode == 2)
+		if (_dmamode == 2)  // _dmamode 2 is for WayForward games, leave alone
 		{
 			u8 *destAddress = GetRealAddress(dest);
-			if (dest == 0x8000 && src == dmaBaseAddress)
+			if (dest == 0x8000 && src == dmaBaseAddress)  // 0x8000 = lowest VRAM destination?
 			{
 				//finish up list of DMA packets
 				new_dma_packet(0, NULL);
@@ -167,7 +148,7 @@ void VRAM_CODE DoDma(int byteCountRemaining)
 			}
 			else
 			{
-				if (dest >= 0x9800)
+				if (dest >= 0x9800)  // 0x9800 = highest VRAM destination?
 				{
 					copy_map_and_compare(destAddress, sourceAddress, byteCount, &dirty_map_words[(dest - 0x9800) / 32]);
 					//_set_bg_cache_full(2);
@@ -179,133 +160,21 @@ void VRAM_CODE DoDma(int byteCountRemaining)
 				}
 			}
 		}
-		else
-		
-		if (_dmamode != 1)
+		else if (_dmamode != 1)
 		{
 			//do the memory copy
 			u8 *destAddress = GetRealAddress(dest);
-			/*
-			if (_dmamode == 2 && dest == 0x8000 && src == dmaBaseAddress)
-			{
-				//force the packets to finish
-				new_dma_packet(NULL, NULL);
-				
-				while (byteCount > 0)
-				{
-					int byteCountInitial = byteCount;
-					u8 *nextStartAddress = sourceAddress + byteCount;
-					
-					for (int i=0; i < MAX_PACKETS; i++)
-					{
-						//do we have a packet for this address?
-						VramPacketData *packet = &vram_packets[i];
-						if (packet->dest != NULL)
-						{
-							if (packet->dest == sourceAddress)
-							{
-								if (packet->dirty)
-								{
-									memcpy32(destAddress, sourceAddress, packet->length);
-									SetDirtyTiles(dest, packet->length);
-									packet->dirty = 0;
-								}
-								dest += packet->length;
-								destAddress += packet->length;
-								sourceAddress += packet->length;
-								byteCount -= packet->length;
-							}
-							else
-							{
-								if (nextStartAddress > packet->dest && packet->dest > sourceAddress)
-								{
-									nextStartAddress = packet->dest;
-								}
-							}
-						}
-					}
-					if (byteCountInitial == byteCount && byteCount > 0)
-					{
-						int length = nextStartAddress - sourceAddress;
-						
-						//nothing registered?
-						//do a memory copy anyway
-						//memcpy32(destAddress, sourceAddress, length);
-						//SetDirtyTiles(dest, length);
-						dest += length;
-						destAddress += length;
-						sourceAddress += length;
-						byteCount -= length;
-					}
-				}
-			}
-			else
-			{
-				memcpy32(destAddress, sourceAddress, byteCount);
-				SetDirtyTiles(dest, byteCount);
-			}
-			*/
-			if (dest >= 0x9800)
-			{
-				copy_map_and_compare(destAddress, sourceAddress, byteCount, &dirty_map_words[(dest - 0x9800) / 32]);
-				//_set_bg_cache_full(2);
-			}
-			else
-			{
-				memcpy32(destAddress, sourceAddress, byteCount);
-				SetDirtyTiles(dest, byteCount);
-			}
-		}
-		else
-		{
-			/*
-			u8 *destAddress = GetRealAddress(dest);
-			//memcpy32(destAddress, sourceAddress, byteCount);
-			//SetDirtyTiles(dest, byteCount);
-			//return;
-			#if 0
-			first pattern:  0x06000000
-			first 128 tiles are sprite tiles  (0:8000)
-			next 128 tiles are shared bg tiles  (0:8800)
-
-			second VRAM bank immediately follows
-
-			second pattern:  0x06008000
-
-			first 128 tiles are bg tiles     (0:9000)
-			next 128 tiles are shared bg tiles  (0:8800)
-
-			second VRAM bank immediately follows
-
-			sprite pattern: 0x06014000
-			first 128 tiles are sprite tiles  (0:8000)
-			next 128 tiles are shared bg tiles  (0:8800)
-
-			second VRAM bank immediately follows
-			#endif
-			//int vramBank = _vrambank;
-			int vramAddress = 0x06000000 + (dest & 0x7F0) * 2 + (_vrambank ? 0x2000 : 0);
-			
-			//direct DMA to physical VRAM
-			switch ((destBlock >> 11) - 16)
-			{
-				case 0:		//sprite tiles 8000
-					//UpdateTiles2(sourceAddress, byteCount, vramAddress);  //, vramAddress + 0x14000);
-					break;
-				case 1:		//shared tiles 8800
-					//UpdateTiles3(sourceAddress, byteCount, vramAddress + 0x1000);  //, vramAddress + 0x9000, vramAddress + 0x15000);
-					break;
-				case 2:		//bg tiles 9000
-					//UpdateTiles1(sourceAddress, byteCount, vramAddress + 0x8000);
-					break;
-				case 3:		//bg maps 9800
-					copy_map_and_compare(destAddress, sourceAddress, byteCount, &dirty_map_words[(dest - 0x9800) / 32]);
-					//memcpy32(GetRealAddress(dest), sourceAddress, byteCount);
-					//_set_bg_cache_full(1);
-					break;
-			}
-			*/
-		}
+            if (dest >= 0x9800)
+            {
+                copy_map_and_compare(destAddress, sourceAddress, byteCount, &dirty_map_words[(dest - 0x9800) / 32]);
+                //_set_bg_cache_full(2);
+            }
+            else
+            {
+                memcpy32(destAddress, sourceAddress, byteCount);
+                SetDirtyTiles(dest, byteCount);
+            }
+		} // else {}  // I guess DMA mode 1 is unused
 		
 	//finishBlock:
 		_dma_src += byteCount;
@@ -313,6 +182,7 @@ void VRAM_CODE DoDma(int byteCountRemaining)
 		_dma_dest &= ~0xE000;
 		_dma_dest |= 0x8000;
 	}
+    // Out of the while loop
 }
 
 
