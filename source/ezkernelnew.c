@@ -1896,6 +1896,14 @@ u32 Check_file_type(TCHAR *pfilename)
 	{
     return 3;
 	}
+	else if(!strcasecmp(ext, "ezotheme"))
+	{
+		return 0xfe;
+	}
+	else if(!strcasecmp(ext, "ezodetheme"))
+	{
+		return 0xfd;
+	}
 	else 
 	{
 		return 0xff;
@@ -3025,7 +3033,81 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 	}		
 
 	is_EMU=Check_file_type(pfilename);
-	if(is_EMU == 0xff) //can not boot
+	if(is_EMU == 0xfe){
+		char* dst = "/THEMES/O";
+		u32 ret = 0;
+		UINT read_ret;
+		UINT write_ret;
+		u32 filesize;
+		u32 res;
+		u32 blocknum;
+		FIL dst_file;
+
+		res = f_open(&gfile, pfilename, FA_READ);
+		if (res == FR_OK)
+		{
+			res = f_open(&dst_file, dst, FA_WRITE | FA_CREATE_ALWAYS);
+			if (res == FR_OK)
+			{
+				filesize = f_size(&gfile);
+				f_lseek(&gfile, 0x0000);
+
+				for (blocknum = 0x0000; blocknum < filesize; blocknum += 0x20000)
+				{
+					f_read(&gfile, pReadCache, 0x20000, &read_ret);
+					f_write(&dst_file, pReadCache, read_ret, &write_ret);
+					if (write_ret != read_ret)
+						break;
+					else
+						ret = 1;
+				}
+
+				f_close(&dst_file);
+
+				if (!ret) f_unlink(dst);
+			}
+			f_close(&gfile);
+		}
+		return 0;
+	}
+	else if(is_EMU == 0xfd){
+		char* dst = "/THEMES/ODE";
+		u32 ret = 0;
+		UINT read_ret;
+		UINT write_ret;
+		u32 filesize;
+		u32 res;
+		u32 blocknum;
+		FIL dst_file;
+
+		res = f_open(&gfile, pfilename, FA_READ);
+		if (res == FR_OK)
+		{
+			res = f_open(&dst_file, dst, FA_WRITE | FA_CREATE_ALWAYS);
+			if (res == FR_OK)
+			{
+				filesize = f_size(&gfile);
+				f_lseek(&gfile, 0x0000);
+
+				for (blocknum = 0x0000; blocknum < filesize; blocknum += 0x20000)
+				{
+					f_read(&gfile, pReadCache, 0x20000, &read_ret);
+					f_write(&dst_file, pReadCache, read_ret, &write_ret);
+					if (write_ret != read_ret)
+						break;
+					else
+						ret = 1;
+				}
+
+				f_close(&dst_file);
+
+				if (!ret) f_unlink(dst);
+			}
+			f_close(&gfile);
+		}
+		return 0;
+	}
+	else if(is_EMU == 0xff) //can not boot
 	{
 		return 0;
 	}							

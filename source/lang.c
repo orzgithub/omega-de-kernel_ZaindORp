@@ -206,7 +206,7 @@ const char zh_file_noexist[]="找不到存档文件";
 const char zh_savbak[]="启用存档备份吗？";
 const char zh_settheme[] = "启用自定义主题吗?";
 
-const char zh_modver[]="Mod版本：V3";
+const char zh_modver[]="Mod版本：V4";
 
 const char *zh_rom_menu[]={
 	"直接启动",
@@ -323,7 +323,7 @@ const char en_file_noexist[]="Cnt not find sav file";
 const char en_savbak[]="Enable the save file backup?";
 const char en_settheme[] = "Use custom theme?";
 
-const char en_modver[]="Mod version:V3";
+const char en_modver[]="Mod version:V4";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",

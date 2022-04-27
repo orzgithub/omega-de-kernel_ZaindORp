@@ -12,8 +12,9 @@
 #include "Ezcard_OP.h"
 
 #include "images.h"
+#include "transflag.h"
 
-
+FIL filecheck;
 
 extern u16 gl_select_lang;
 u16 Rev;
@@ -39,6 +40,9 @@ u32 Show_help_window()
 	}
 	else{
 		DrawPic((u16*)gImage_Chinese_manual, 240-70, 160-70, 70, 70, 0, 0, 1);//
+	}
+	if (f_open(&filecheck,"/FLAGS/I_SUPPORT_TRANSGENDER", FA_OPEN_EXISTING) != FR_OK){
+		DrawPic((u16*)transflag, 240-70-14, 160-70, 14, 70, 0, 0, 1);
 	}
 	DrawHZText12("START  :",0,3,20, gl_color_selected,1);
 		DrawHZText12(gl_START_help,0,52,20, gl_color_text,1);
