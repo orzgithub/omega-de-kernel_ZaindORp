@@ -1,0 +1,3 @@
+[submodule "emusrc/jagoomba"]
+	path = emusrc/jagoomba
+	url = https://github.com/EvilJagaGenius/jagoombacolor.git
