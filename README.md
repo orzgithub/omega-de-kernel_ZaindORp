@@ -1,6 +1,6 @@
-#EZ-FLASH  Omega Definitive Edition Kernel
+# EZ-FLASH  Omega Definitive Edition Kernel
 
-### Author's words
+## Author's words
 
 ZaindORp added some features to this version.
 Why ZaindORp made this? Who knows. In fact Sterophonick's version seems better and more powerful.
@@ -8,7 +8,7 @@ ZaindORp isn't really a good programmer and she just found a old EZ-Omega kernel
 But after everything is done she found erophonick's version and found the project have already be made before but decided to keep on developing ZaindORp's own version. ZaindORp has no EZ-Omega so she can't test the kernel on that and won't make a version for that.
 By the way ZaindORp always call herself in the third person.
 
-### What's added
+## What's added
 
 - Save backup
 - Skip saving when holding L
@@ -17,7 +17,7 @@ By the way ZaindORp always call herself in the third person.
 - An easter egg
 - An transgender flag in help page(Create a file name I_SUPPORT_TRANSGENDER in the folder FLAGS to disable it)
 
-### How to use the pogoshell plugins
+## How to use the pogoshell plugins
 
 1. Rename the plugins as [extname the plugin can open].[plugin's own extname]
 2. Move it to /PLUGINS/
@@ -96,11 +96,11 @@ Colors: (All the colors are shown as a one-pixel picture and the color of the pi
 	gl_color_btn_clean: The background of the selection when the course move on
 ```
 3. Click on "save firmware" in the menu and the tool will gen image.bin_edit. You can also share this file so everyone can easily use the theme.
-4. Rename it as ODE and put it in /THEMES folder.
-5. Enable the custom theme selection.
+4. Rename it as [theme_name].ezodetheme and put it in your SD card.
+5. Enable the custom theme selection and select the theme file on your GBA, press A to apply it.
 6. Enjoy the theme.
 
-### How to build 
+## How to build 
 
 1. We use devkitARM_r53, you can use the current version or newer.
 2. Set the following environment variables in system, based on your installation path

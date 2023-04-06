@@ -516,6 +516,7 @@ u32 set_usetheme() {
 			f_mkdir("/FLAGS");
 			f_open(&gfile, "/FLAGS/USETHEME", FA_WRITE | FA_CREATE_ALWAYS);
 			f_close(&gfile);
+			Themes_init();
 		}
 		else if (keysdown & KEY_B) {
 			f_unlink("/FLAGS/USETHEME");
@@ -1375,7 +1376,7 @@ void CheckLanguage(void)
 	{
 		LoadEnglish();
 	}
-	else//ÖÐÎÄ
+	else//ï¿½ï¿½ï¿½ï¿½
 	{
 		LoadChinese();
 	}
@@ -2191,6 +2192,27 @@ void Set_saveMODE(BYTE saveMODE)
 	Save_SET_info(SET_info_buffer,0x200);
 }
 //---------------------------------------------------------------------------------
+void Themes_init(){
+	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
+		f_close(&gfile);
+		UINT theme_ret;
+		usetheme = 1;
+		f_lseek(&themefile, 0x94410);
+		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
+		gl_color_text = *(u16*)(themereadbuffer + 0x0);
+		gl_color_selectBG_sd = *(u16*)(themereadbuffer + 0x2);
+		gl_color_selectBG_nor = *(u16*)(themereadbuffer + 0x4);
+		gl_color_cheat_black = *(u16*)(themereadbuffer + 0x6);
+		gl_color_saverr = *(u16*)(themereadbuffer + 0x8);
+		gl_color_unknown = *(u16*)(themereadbuffer + 0xA);
+		gl_color_MENU_btn = *(u16*)(themereadbuffer + 0xC);
+		gl_color_selected = *(u16*)(themereadbuffer + 0xE);
+		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
+		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
+		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
+	}
+}
+//---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
@@ -2248,24 +2270,8 @@ int main(void) {
 		DrawHZText12(gl_init_ok,0,2,20, gl_color_cheat_black,1);
 		DrawHZText12(gl_Loading,0,2,33, gl_color_cheat_black,1);
 	}
-	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
-		f_close(&gfile);
-		UINT theme_ret;
-		usetheme = 1;
-		f_lseek(&themefile, 0x94410);
-		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
-		gl_color_text = *(u16*)(themereadbuffer + 0x0);
-		gl_color_selectBG_sd = *(u16*)(themereadbuffer + 0x2);
-		gl_color_selectBG_nor = *(u16*)(themereadbuffer + 0x4);
-		gl_color_cheat_black = *(u16*)(themereadbuffer + 0x6);
-		gl_color_saverr = *(u16*)(themereadbuffer + 0x8);
-		gl_color_unknown = *(u16*)(themereadbuffer + 0xA);
-		gl_color_MENU_btn = *(u16*)(themereadbuffer + 0xC);
-		gl_color_selected = *(u16*)(themereadbuffer + 0xE);
-		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
-		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
-		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
-	}
+	
+	Themes_init();
 	VBlankIntrWait();	
 	
 	Check_save_flag();
@@ -3033,8 +3039,19 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 	}		
 
 	is_EMU=Check_file_type(pfilename);
-	if(is_EMU == 0xfe){
-		char* dst = "/THEMES/O";
+	if(is_EMU == 0xfe || is_EMU == 0xfd){
+		char* dst = "PLACEHOLDER";
+		switch (is_EMU)
+		{
+		case 0xfe:
+			dst = "/THEMES/O";
+			break;
+		case 0xfd:
+			dst = "/THEMES/ODE";
+			break;
+		default:
+			break;
+		}
 		u32 ret = 0;
 		UINT read_ret;
 		UINT write_ret;
@@ -3068,43 +3085,7 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 			}
 			f_close(&gfile);
 		}
-		return 0;
-	}
-	else if(is_EMU == 0xfd){
-		char* dst = "/THEMES/ODE";
-		u32 ret = 0;
-		UINT read_ret;
-		UINT write_ret;
-		u32 filesize;
-		u32 res;
-		u32 blocknum;
-		FIL dst_file;
-
-		res = f_open(&gfile, pfilename, FA_READ);
-		if (res == FR_OK)
-		{
-			res = f_open(&dst_file, dst, FA_WRITE | FA_CREATE_ALWAYS);
-			if (res == FR_OK)
-			{
-				filesize = f_size(&gfile);
-				f_lseek(&gfile, 0x0000);
-
-				for (blocknum = 0x0000; blocknum < filesize; blocknum += 0x20000)
-				{
-					f_read(&gfile, pReadCache, 0x20000, &read_ret);
-					f_write(&dst_file, pReadCache, read_ret, &write_ret);
-					if (write_ret != read_ret)
-						break;
-					else
-						ret = 1;
-				}
-
-				f_close(&dst_file);
-
-				if (!ret) f_unlink(dst);
-			}
-			f_close(&gfile);
-		}
+		Themes_init();
 		return 0;
 	}
 	else if(is_EMU == 0xff) //can not boot
