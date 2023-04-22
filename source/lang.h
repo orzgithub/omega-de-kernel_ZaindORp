@@ -102,6 +102,8 @@ extern char* gl_settheme;
 
 extern char* gl_modver;
 
+extern char* gl_loading_themefile;
+
 extern char**  	gl_rom_menu;
 extern char**   gl_nor_op;
 

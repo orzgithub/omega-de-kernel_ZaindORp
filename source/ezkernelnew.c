@@ -3060,6 +3060,9 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 		u32 blocknum;
 		FIL dst_file;
 
+		DrawPic((u16*)gImage_MENU, 56, 25, 128, 110, 0, 0, 1);
+		DrawHZText12(gl_loading_themefile,0,60,28,gl_color_text,1);
+
 		res = f_open(&gfile, pfilename, FA_READ);
 		if (res == FR_OK)
 		{
