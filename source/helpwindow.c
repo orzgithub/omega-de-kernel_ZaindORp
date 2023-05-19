@@ -14,6 +14,9 @@
 #include "images.h"
 #include "transflag.h"
 
+#define USEEASTER 0
+// These easters were broken on newer version of Devkit pro so set to 1 only when you are using an older compliator.
+
 FIL filecheck;
 
 extern u16 gl_select_lang;
@@ -64,9 +67,11 @@ u32 Show_help_window()
 	DrawHZText12(gl_online_manual,0,240-70-7,77, gl_color_text,1);
 	while(1)
 	{
-		if (tapa == 4){
-			gameMine();
-		}
+		#if USEEASTER == 1
+			if (tapa == 4){
+				gameMine();
+			}
+		#endif
 		VBlankIntrWait(); 	
 		scanKeys();
 		u16 keys = keysDown();
@@ -76,8 +81,10 @@ u32 Show_help_window()
 		else if (keys & KEY_R){
 			return 1;
 		}
-		else if (keys & KEY_A){
-			tapa++;
-		}
+		#if USEEASTER == 1
+			else if (keys & KEY_A){
+				tapa++;
+			}
+		#endif
 	}
 }

@@ -14,7 +14,7 @@ By the way ZaindORp always call herself in the third person.
 - Skip saving when holding L
 - Pogoshell plugins support
 - Use custom theme place in sd card
-- An easter egg
+- An easter egg(seems broken due to the changes of the devkitpro)
 - An transgender flag in help page(Create a file name I_SUPPORT_TRANSGENDER in the folder FLAGS to disable it)
 
 ## How to use the pogoshell plugins
