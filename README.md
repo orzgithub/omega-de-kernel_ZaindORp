@@ -6,6 +6,7 @@ ZaindORp added some features to this version.
 Why ZaindORp made this? Who knows. In fact Sterophonick's version seems better and more powerful.
 ZaindORp isn't really a good programmer and she just found a old EZ-Omega kernel so ZaindORp tried to renew it and port it to the EZ-Omega Defintive Edition.
 But after everything is done she found Sherophonick's version and found the project have already be made before but decided to keep on developing ZaindORp's own version. ZaindORp has no EZ-Omega so she can't test the kernel on that and won't make a version for that.
+Different from Sherophonick's Simple Light kernel, this kernel trys to Minimize modifications to the original behavior of the kernel itself.For example, the path is consistent with the official kernel by default, the theme uses the same format as the official default resource file and can be used out of the box to directly replace the original resource file link to the official source code compilation (and this means it wouldn't support more icons for different file types, at least this won't work in the same way as current theme system). 
 By the way ZaindORp always call herself in the third person.
 
 ## What's added
