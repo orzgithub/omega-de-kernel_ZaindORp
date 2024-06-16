@@ -210,7 +210,7 @@ const char zh_settheme[] = "启用自定义主题吗?";
 
 const char zh_loading_themefile[] = "加载主题文件中…";
 
-const char zh_modver[]="Mod版本：V5";
+const char zh_modver[]="Mod版本：V6";
 
 const char *zh_rom_menu[]={
 	"直接启动",
@@ -321,7 +321,7 @@ const char en_SD_working[]="   SD LED";
 const char en_NOR_full[]="NOR space not enough  ";
 const char en_save_loaded[]="Sav have been loaded";
 const char en_save_saved[]="Sav have been saved";
-const char en_file_exist[]="File exist，cover it?";
+const char en_file_exist[]="File exist, cover it?";
 const char en_file_noexist[]="Cnt not find sav file";
 
 const char en_savbak[]="Enable the save file backup?";
@@ -329,7 +329,7 @@ const char en_settheme[] = "Use custom theme?";
 
 const char en_loading_themefile[] = "Loading theme file...";
 
-const char en_modver[]="Mod version:V5";
+const char en_modver[]="Mod version:V6";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",
