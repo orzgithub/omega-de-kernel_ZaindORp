@@ -1,5 +1,4 @@
 #include "lang.h"
-#include "gamemine.h"
 
 char* gl_init_error;
 char* gl_power_off;
