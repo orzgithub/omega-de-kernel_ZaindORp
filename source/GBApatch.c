@@ -64,7 +64,7 @@ void Write(u32 romaddress, const u8* buffer, u32 size)
 		SetPSRampage(page);
 		
 		for(x=0;x<size/2;x++)
-			((vu16*)(PSRAMBase_S98 + Address))[x] = ((vu16*)buffer)[x];//todo »¹Òª´¦Àípsram page
+			((vu16*)(PSRAMBase_S98 + Address))[x] = ((vu16*)buffer)[x];//todo ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½psram page
 						
 		//DEBUG_printf("address{%x}:%x %x %x %x", romaddress,page,Address,size ,((vu32*)buffer)[0]);
 		SetPSRampage(0);
@@ -253,7 +253,7 @@ void IWRAM_CODE PatchInternal(u32* Data,int iSize,u32 offset)
     {
       case 0x3007FFC: // IRQ handler
         {
-          Add2(ii, 0x3007FF4);//0x3007FFCµÄÎ»ÖÃ
+          Add2(ii, 0x3007FF4);//0x3007FFCï¿½ï¿½Î»ï¿½ï¿½
         }
         break;
       case 0x3FFFFFC: // IRQ handler
@@ -391,7 +391,7 @@ void Patch_Reset_Sleep(u32 *Data)
   u32 Return_address_offset = p_patch_Return_address_L-p_patch_start;
 
   dmaCopy((void*)p_patch_start,patchbuffer, p_patch_end-p_patch_start);
-  *(vu32*)(patchbuffer+Return_address_offset) = Return_address;//ÐÞ¸Ägba_sleep_patch_binÀïÃæµÄ·µ»ØµØÖ·
+  *(vu32*)(patchbuffer+Return_address_offset) = Return_address;//ï¿½Þ¸ï¿½gba_sleep_patch_binï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½Øµï¿½Ö·
 
 	u16 read5 = Read_SET_info(assress_edit_sleephotkey_0); 
 	u16 read6 = Read_SET_info(assress_edit_sleephotkey_1); 
@@ -593,6 +593,24 @@ u32 Get_spend_address(u32* Data)
   }
   else 
   	return 0;	
+}
+//------------------------------------------------------------------
+void Patch_somegame(u32 *Data)
+{
+	u32 size = 0x7FF0;
+	if( *(u32*)GAMECODE == 0x50424732 )
+	{
+  	for(u32 ii=0;ii<0x100;ii++)
+  	{
+   	 if(0x3000000==Data[ii])
+    	{
+    		if(0x8000 ==Data[ii+1] )
+    		{
+    			Write((ii+1)*4,(u8*)&size,4 );
+    		}
+    	}
+		}
+	}
 }
 //------------------------------------------------------------------
 void GBApatch_PSRAM(u32* address,int filesize)//Only once
@@ -1416,21 +1434,3 @@ void Patch_SpecialROM_TrimSize(void)
 	}	
 }
 */
-//------------------------------------------------------------------
-void Patch_somegame(u32 *Data)
-{
-	u32 size = 0x7FF0;
-	if( *(u32*)GAMECODE == 0x50424732 )
-	{
-  	for(u32 ii=0;ii<0x100;ii++)
-  	{
-   	 if(0x3000000==Data[ii])
-    	{
-    		if(0x8000 ==Data[ii+1] )
-    		{
-    			Write((ii+1)*4,(u8*)&size,4 );
-    		}
-    	}
-		}
-	}
-}

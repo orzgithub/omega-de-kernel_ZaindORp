@@ -2,6 +2,7 @@
 #include <gba_sound.h>
 #include <gba_interrupt.h>
 #include <gba_systemcalls.h>
+#include <gba_compression.h>
 #include <gba_input.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@ extern u32 FAT_table_buffer[FAT_table_size/4]EWRAM_BSS;
 extern FIL gfile;
 // --------------------------------------------------------------------
 extern void HardReset(void);
+extern void SoftReset_now(void);
 
 
 // --------------------------------------------------------------------
@@ -284,9 +286,11 @@ void IWRAM_CODE SetRompageWithHardReset(u16 page,u32 bootmode)
 		for(i=0;i<0xfefe;i++)
 			p[i]=0;
 		//SoftReset_now(0,0x100);
-		SoftReset_now(0,0xfe);
+		//SoftReset_now(0,0xfe);
+		SoftReset_now();
 	} else {
-		SoftReset_now(0,0xff);
+		//SoftReset_now(0,0xff);
+		SoftReset_now();
 	}
 }
 // --------------------------------------------------------------------

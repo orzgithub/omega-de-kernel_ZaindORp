@@ -474,6 +474,15 @@ void IWRAM_CODE Refresh_filename(u32 show_offset,u32 file_select,u32 updown,u32 
 	}
 }
 //---------------------------------------------------------------------------------
+void Show_MENU_btn()
+{
+	char msg[30];
+	Clear(60,118-1,55,14,gl_color_MENU_btn,1);
+	Clear(125,118-1,55,14,gl_color_MENU_btn,1);
+	sprintf(msg,"%s",gl_menu_btn);
+	DrawHZText12(msg,0,60,118, gl_color_text,1);
+}
+//---------------------------------------------------------------------------------
 u32 set_savbak(){
 	DrawHZText12(gl_savbak,0,20,28,gl_color_text,1);//use sure?gl_LSTART_help
 	Show_MENU_btn();
@@ -501,6 +510,27 @@ u32 set_savbak(){
 		}
 	}
 	return out;
+}
+//---------------------------------------------------------------------------------
+void Themes_init(){
+	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
+		f_close(&gfile);
+		UINT theme_ret;
+		usetheme = 1;
+		f_lseek(&themefile, 0x94410);
+		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
+		gl_color_text = *(u16*)(themereadbuffer + 0x0);
+		gl_color_selectBG_sd = *(u16*)(themereadbuffer + 0x2);
+		gl_color_selectBG_nor = *(u16*)(themereadbuffer + 0x4);
+		gl_color_cheat_black = *(u16*)(themereadbuffer + 0x6);
+		gl_color_saverr = *(u16*)(themereadbuffer + 0x8);
+		gl_color_unknown = *(u16*)(themereadbuffer + 0xA);
+		gl_color_MENU_btn = *(u16*)(themereadbuffer + 0xC);
+		gl_color_selected = *(u16*)(themereadbuffer + 0xE);
+		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
+		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
+		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
+	}
 }
 //---------------------------------------------------------------------------------
 u32 set_usetheme() {
@@ -712,15 +742,6 @@ void Filename_loop(u32 shift,u32 show_offset,u32 file_select,u32 haveThumbnail)
 			}	
 		}
 	}		
-}
-//---------------------------------------------------------------------------------
-void Show_MENU_btn()
-{
-	char msg[30];
-	Clear(60,118-1,55,14,gl_color_MENU_btn,1);
-	Clear(125,118-1,55,14,gl_color_MENU_btn,1);
-	sprintf(msg,"%s",gl_menu_btn);
-	DrawHZText12(msg,0,60,118, gl_color_text,1);
 }
 //---------------------------------------------------------------------------------
 void Show_MENU(u32 menu_select,PAGE_NUM page,u32 havecht,u32 Save_num,u32 is_menu,u32 firstgame)
@@ -1574,7 +1595,8 @@ void IWRAM_CODE make_pogoshell_arguments(TCHAR *cmdname, TCHAR *filename, u32 cm
 	// Passed in 32KB aligned
 	offset = offset + 0x08000000 + 8;
 
-	p = pReadCache;
+	//p = pReadCache;
+	p = (u32*)pReadCache;
 
 	// Magic value in ROM address space
 	*p++ = 0xFAB0BABE;
@@ -2192,27 +2214,6 @@ void Set_saveMODE(BYTE saveMODE)
 	Save_SET_info(SET_info_buffer,0x200);
 }
 //---------------------------------------------------------------------------------
-void Themes_init(){
-	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
-		f_close(&gfile);
-		UINT theme_ret;
-		usetheme = 1;
-		f_lseek(&themefile, 0x94410);
-		f_read(&themefile, themereadbuffer, 0x16, &theme_ret);
-		gl_color_text = *(u16*)(themereadbuffer + 0x0);
-		gl_color_selectBG_sd = *(u16*)(themereadbuffer + 0x2);
-		gl_color_selectBG_nor = *(u16*)(themereadbuffer + 0x4);
-		gl_color_cheat_black = *(u16*)(themereadbuffer + 0x6);
-		gl_color_saverr = *(u16*)(themereadbuffer + 0x8);
-		gl_color_unknown = *(u16*)(themereadbuffer + 0xA);
-		gl_color_MENU_btn = *(u16*)(themereadbuffer + 0xC);
-		gl_color_selected = *(u16*)(themereadbuffer + 0xE);
-		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
-		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
-		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
-	}
-}
-//---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------
@@ -2510,7 +2511,7 @@ re_showfile:
 	    	if(page_num==NOR_list)
 	    	{
 					Refresh_filename_NOR(show_offset,file_select,updata);
-					ClearWithBG(gImage_NOR,185, 0, 30, 18, 1);
+					ClearWithBG((u16*)gImage_NOR,185, 0, 30, 18, 1);
 	    	}
 	    	else
 	    	{
