@@ -37,6 +37,23 @@ void IWRAM_CODE Clear(u16 x, u16 y, u16 w, u16 h, u16 c, u8 isDrawDirect)
 		dmaCopy(pReadCache,p+yi*240+x,ww*2);         
 }
 //******************************************************************************
+void IWRAM_CODE Real_ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
+{
+	u16 *p;
+	u16 yi,ww,hh;
+    
+	if(isDrawDirect)
+		p = VideoBuffer;
+	else
+		p = Vcache;
+
+    hh = (y+h>160)?160:(y+h);
+    ww  = (x+w>240)?(240-x):w;
+
+	for(yi=y; yi < hh; yi++)
+		dmaCopy(pbg+yi*240+x,p+yi*240+x,ww*2);       
+}
+//******************************************************************************
 void IWRAM_CODE ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
 {
 	if(usetheme && pbg >= (u16*)gImage_Chinese_manual && pbg <= (u16*)(gImage_MENU + 0x6E00)){
@@ -79,47 +96,6 @@ void IWRAM_CODE ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect
 		Real_ClearWithBG(pbg, x, y, w, h, isDrawDirect);
 }
 //******************************************************************************
-void IWRAM_CODE Real_ClearWithBG(u16* pbg,u16 x, u16 y, u16 w, u16 h, u8 isDrawDirect)
-{
-	u16 *p;
-	u16 yi,ww,hh;
-    
-	if(isDrawDirect)
-		p = VideoBuffer;
-	else
-		p = Vcache;
-
-    hh = (y+h>160)?160:(y+h);
-    ww  = (x+w>240)?(240-x):w;
-
-	for(yi=y; yi < hh; yi++)
-		dmaCopy(pbg+yi*240+x,p+yi*240+x,ww*2);       
-}
-//******************************************************************************
-void IWRAM_CODE DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
-{
-	if(usetheme && (u16*)GFX >= (u16*)gImage_Chinese_manual && (u16*)GFX <= (u16*)(gImage_MENU + 0x6E00)){
-		UINT theme_ret;
-		u16 lefth = h;
-		while(lefth != 0){
-			if((lefth * w * 2) > SKIN_BUFFER_SIZE){
-				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
-				f_read(&themefile, themereadbuffer, w * ((SKIN_BUFFER_SIZE / 2) / w) * 2, &theme_ret);
-				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, ((SKIN_BUFFER_SIZE / 2) / w), isTrans, tcolor, isDrawDirect);
-				lefth -= ((SKIN_BUFFER_SIZE / 2) / w);
-			}
-			else{
-				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
-				f_read(&themefile, themereadbuffer, w * lefth * 2, &theme_ret);
-				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, lefth, isTrans, tcolor, isDrawDirect);
-				lefth = 0;
-			}
-		}
-	}
-	else
-		Real_DrawPic(GFX, x, y, w, h, isTrans, tcolor, isDrawDirect);
-}
-//******************************************************************************
 void IWRAM_CODE Real_DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
 {
 	u16 *p,c;
@@ -148,6 +124,30 @@ void IWRAM_CODE Real_DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u
 		for(yi=y; yi < hh; yi++)
 			dmaCopy(GFX+(yi-y)*w,p+yi*240+x,w*2); 
 	}
+}
+//******************************************************************************
+void IWRAM_CODE DrawPic(u16 *GFX, u16 x, u16 y, u16 w, u16 h, u8 isTrans, u16 tcolor, u8 isDrawDirect)
+{
+	if(usetheme && (u16*)GFX >= (u16*)gImage_Chinese_manual && (u16*)GFX <= (u16*)(gImage_MENU + 0x6E00)){
+		UINT theme_ret;
+		u16 lefth = h;
+		while(lefth != 0){
+			if((lefth * w * 2) > SKIN_BUFFER_SIZE){
+				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
+				f_read(&themefile, themereadbuffer, w * ((SKIN_BUFFER_SIZE / 2) / w) * 2, &theme_ret);
+				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, ((SKIN_BUFFER_SIZE / 2) / w), isTrans, tcolor, isDrawDirect);
+				lefth -= ((SKIN_BUFFER_SIZE / 2) / w);
+			}
+			else{
+				f_lseek(&themefile, ((GFX - (u16*)gImage_Chinese_manual) * sizeof(u16)) + ((h - lefth) * w * 2));
+				f_read(&themefile, themereadbuffer, w * lefth * 2, &theme_ret);
+				Real_DrawPic((u16*)themereadbuffer, x, y + (h - lefth), w, lefth, isTrans, tcolor, isDrawDirect);
+				lefth = 0;
+			}
+		}
+	}
+	else
+		Real_DrawPic(GFX, x, y, w, h, isTrans, tcolor, isDrawDirect);
 }
 //---------------------------------------------------------------------------------
 void DrawHZText12(char *str, u16 len, u16 x, u16 y, u16 c, u8 isDrawDirect)
