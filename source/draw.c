@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "ez_define.h"
-#include "hzk12.h"
+#include "HZK12.h"
 #include "asc126.h"
 #include "ezkernel.h"
 #include "draw.h"
