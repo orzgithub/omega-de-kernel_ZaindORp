@@ -17,6 +17,10 @@
 #define USEEASTER 0
 // These easters were broken on newer version of Devkit pro so set to 1 only when you are using an older compliator.
 
+#if USEEASTER == 1
+	#include "gamemine.h"
+#endif
+
 FIL filecheck;
 
 extern u16 gl_select_lang;
