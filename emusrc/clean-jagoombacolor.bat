@@ -9,7 +9,7 @@ make clean
 
 cd ..
 
-del goomba.gba
-del goomba.h
+del jagoomba.gba
+del jagoomba.h
 
 pause

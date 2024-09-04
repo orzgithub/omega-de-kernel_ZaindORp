@@ -1,2 +1,2 @@
-bin2c -o goomba.h goomba.gba
+bin2c -o jagoomba.h jagoomba.gba
 pause

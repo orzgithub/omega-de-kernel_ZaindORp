@@ -11,9 +11,9 @@ ren .\build\fontpal.bin.o fontpal.o
 make
 
 cd ..
-copy .\jagoomba\jagoombacolor.gba goomba.gba
-bin2c -o goomba.h goomba.gba
-copy goomba.h ..\source\goomba.h
+copy .\jagoomba\jagoombacolor.gba jagoomba.gba
+bin2c -o jagoomba.h jagoomba.gba
+copy jagoomba.h ..\source\jagoomba.h
 
 rem >error.txt 2>&1
 pause
