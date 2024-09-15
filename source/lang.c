@@ -209,7 +209,7 @@ const char zh_settheme[] = "启用自定义主题吗?";
 
 const char zh_loading_themefile[] = "加载主题文件中…";
 
-const char zh_modver[]="Mod版本：V6";
+const char zh_modver[]="Mod版本：V7";
 
 const char *zh_rom_menu[]={
 	"直接启动",
@@ -328,7 +328,7 @@ const char en_settheme[] = "Use custom theme?";
 
 const char en_loading_themefile[] = "Loading theme file...";
 
-const char en_modver[]="Mod version:V6";
+const char en_modver[]="Mod version:V7";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",
