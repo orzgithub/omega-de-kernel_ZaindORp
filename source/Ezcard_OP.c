@@ -264,9 +264,10 @@ void IWRAM_CODE SetRompageWithHardReset(u16 page,u32 bootmode)
 	REG_IF=0;
 	REG_IME=0;
 	REG_SOUNDBIAS=0x0200;
+	if (bootmode == 0 || bootmode == 1) RegisterRamReset(RESET_EWRAM | RESET_PALETTE | RESET_VRAM | RESET_OAM | RESET_SIO | RESET_SOUND | RESET_OTHER);
 	if(bootmode==1) {
 		HardReset();
-	} else if (bootmode==2 || bootmode==4) {
+	} else if (bootmode==2 || bootmode==4) { // multiboot mode plugin, 2 for normal mb and 4 for mbz
 		int i;
 		//Clear exram up to pogoshell arg
 		u32 *p = (u32*)(0x02000000);
@@ -279,12 +280,7 @@ void IWRAM_CODE SetRompageWithHardReset(u16 page,u32 bootmode)
 			LZ77UnCompWram((u8*)(0x08000000),(u8*)(0x02000000));
 		RegisterRamReset(0xfc);
 		((void(*)(void))0x02000000)();
-	} else if (bootmode == 3) {
-		int i;
-		//Clear exram up to pogoshell arg
-		u32 *p = (u32*)(0x02000000);
-		for(i=0;i<0xfefe;i++)
-			p[i]=0;
+	} else if (bootmode == 3) { // normal GBA mode plugin
 		//SoftReset_now(0,0x100);
 		//SoftReset_now(0,0xfe);
 		SoftReset_now();

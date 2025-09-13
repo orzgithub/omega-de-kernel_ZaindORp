@@ -3277,7 +3277,7 @@ re_show_menu:
 		int bootmode=(is_EMU > 3) ?
 			((is_EMU == 6) ? 2
 			: ((is_EMU == 7) ? 4 : 3)) : key_L;
-		SetRompageWithHardReset(0x200,key_L);
+		SetRompageWithHardReset(0x200, bootmode);
 		while(1);
 	}		
 	else {	//gba file
