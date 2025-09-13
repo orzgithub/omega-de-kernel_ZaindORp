@@ -31,7 +31,7 @@ void Chip_Reset()
 	*((vu16 *)(FlashBase_S98)) = 0xF0 ;
 }
 //---------------------------------------------------------------
-void Block_Erase(u32 blockAdd) //0x20000 BYTE pre block
+void IWRAM_CODE Block_Erase(u32 blockAdd) //0x20000 BYTE pre block
 {
 	vu16 page,v1,v2;
 	u32 Address;
@@ -64,7 +64,7 @@ void Block_Erase(u32 blockAdd) //0x20000 BYTE pre block
 			{
 				v1 = *((vu16 *)(FlashBase_S98+Address+loop)) ;
 				v2 = *((vu16 *)(FlashBase_S98+Address+loop)) ;
-			}while(v1!=v2);
+			}while((v1!=v2) || ((v1&0x80)!=0x80));
 		}
 	}
 	else
@@ -81,7 +81,7 @@ void Block_Erase(u32 blockAdd) //0x20000 BYTE pre block
 		{
 			v1 = *((vu16 *)(FlashBase_S98+loop)) ;
 			v2 = *((vu16 *)(FlashBase_S98+loop)) ;
-		}while(v1!=v2);
+		}while((v1!=v2) || ((v1&0x80)!=0x80));
 	}
 	SetRompage(gl_currentpage);
 }
@@ -194,12 +194,13 @@ void IWRAM_CODE WriteFlash_with32word(u32 address,u8 *buffer,u32 size)
 		*((vu16 *)(FlashBase_S98+0x2AA*2)) = 0x55 ;
 		*((vu16 *)(FlashBase_S98+address+loopwrite*32)) = 0x25;
 		*((vu16 *)(FlashBase_S98+address+loopwrite*32)) = 15;
+		delay(10);
 		for(i=0;i<=15;i++)
 		{
 			*((vu16 *)(FlashBase_S98+address+loopwrite*32 +2*i )) = buf[loopwrite*16+i];
 		}	
 		*((vu16 *)(FlashBase_S98+address+loopwrite*32)) = 0x29;
-		
+		delay(40);
 		do
 		{
 			v1 = *((vu16 *)(FlashBase_S98+address+loopwrite*32+0xF*2)) ;
