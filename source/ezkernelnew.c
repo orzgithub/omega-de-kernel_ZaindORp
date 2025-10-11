@@ -513,8 +513,7 @@ u32 set_savbak(){
 }
 //---------------------------------------------------------------------------------
 void Themes_init(){
-	if (f_open(&gfile,"/FLAGS/USETHEME", FA_OPEN_EXISTING) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
-		f_close(&gfile);
+	if (f_stat("/FLAGS/USETHEME", NULL) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
 		UINT theme_ret;
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
@@ -530,6 +529,10 @@ void Themes_init(){
 		gl_color_cheat_count = *(u16*)(themereadbuffer + 0x10);
 		gl_color_NORFULL = *(u16*)(themereadbuffer + 0x12);
 		gl_color_btn_clean = *(u16*)(themereadbuffer + 0x14);
+	}
+	else {
+		usetheme = 0;
+		set_default_theme();
 	}
 }
 //---------------------------------------------------------------------------------
@@ -1397,7 +1400,7 @@ void CheckLanguage(void)
 	{
 		LoadEnglish();
 	}
-	else//ÖÐÎÄ
+	else//????
 	{
 		LoadChinese();
 	}
@@ -1629,13 +1632,7 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 	SetPSRampage(0);
 	
 	u32 rom_start_address=0;
-	
-	res = f_open(&gfile, plugin, FA_READ);
-	if(res = FR_OK){
-		f_close(&gfile);
-		is_EMU = 0xFF;
-	}
-	
+
 	switch(is_EMU)
 	{
 		case 1://gbc
@@ -1680,7 +1677,7 @@ u32 IWRAM_CODE LoadEMU2PSRAM(TCHAR *filename,u32 is_EMU)
 			blockoffset=blocknum;
 			// Guarantee word alignment
 			rom_start_address = (filesize+3)&~3;
-			break;	
+			break;
 	}
 	
 	res = f_open(&gfile, filename, FA_READ);
@@ -2155,10 +2152,7 @@ void Check_save_flag(void)
 								DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 					f_mkdir(SAVER_FOLDER);//"/SAVER"
 					f_chdir(SAVER_FOLDER); 
-			if(f_open(&gfile,"/FLAGS/SAVBAK", FA_OPEN_EXISTING) == FR_OK){
-				f_close(&gfile);
-				Process_savbak((TCHAR *)SAV_info_buffer);
-			}
+			if(f_stat("/FLAGS/SAVBAK", NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);	
 		}
 				else if (!(keysdown & KEY_L)){
@@ -2171,10 +2165,7 @@ void Check_save_flag(void)
 						DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 						f_mkdir(SAVER_FOLDER);
 						f_chdir(SAVER_FOLDER);
-					if(f_open(&gfile,"/FLAGS/SAVBAK", FA_OPEN_EXISTING) == FR_OK){
-						f_close(&gfile);
-						Process_savbak((TCHAR *)SAV_info_buffer);
-					}
+					if(f_stat("/FLAGS/SAVBAK", NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);
 						/*TCHAR bmpfilename[100];	
 						u32 bmpnum;
@@ -2268,11 +2259,12 @@ int main(void) {
 	}
 	else
 	{
+		Themes_init();
+		DrawPic((u16*)gImage_splash, 0, 0, 240, 160, 0, 0, 1);
 		DrawHZText12(gl_init_ok,0,2,20, gl_color_cheat_black,1);
 		DrawHZText12(gl_Loading,0,2,33, gl_color_cheat_black,1);
 	}
-	
-	Themes_init();
+
 	VBlankIntrWait();	
 	
 	Check_save_flag();
