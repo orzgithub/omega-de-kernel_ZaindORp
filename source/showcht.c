@@ -741,10 +741,10 @@ u32 Change2cht_folder(u32 chtname)
 	
 	if(gl_select_lang == 0xE1E1)//english
 	{
-		sprintf(currentpath,"/CHEAT/Eng/%s",folder_name);
+		sprintf(currentpath,"%s/Eng/%s", CHEAT_FOLDER, folder_name);
 	}
 	else{		
-		sprintf(currentpath,"/CHEAT/Chn/%s",folder_name);
+		sprintf(currentpath,"%s/Chn/%s", CHEAT_FOLDER, folder_name);
 	}
 	res=f_chdir(currentpath);		
 	return res;
@@ -774,7 +774,7 @@ u32 Check_cheat_file(TCHAR *gamefilename)
 	chtnamebuf[len-2] = 'h';
 	chtnamebuf[len-1] = 't';	
 	
-	res=f_chdir("/CHEAT");
+	res=f_chdir(CHEAT_FOLDER);
 	if(res != FR_OK){
 		return 0;
 	}
@@ -846,7 +846,7 @@ void Open_cht_file(TCHAR *gamefilename,u32 havecht)
 		
 	if(havecht == 0x0000FFFF)
 	{
-		res=f_chdir("/CHEAT");
+		res=f_chdir(CHEAT_FOLDER);
 		if(res != FR_OK){
 			return;
 		}	

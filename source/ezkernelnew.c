@@ -46,6 +46,8 @@ TCHAR current_filename[200];
 
 TCHAR plugin[100]; //pogoshell plugin
 
+TCHAR str_buffer[2][20];
+
 u8 p_folder_select_show_offset[100]EWRAM_BSS;
 u8 p_folder_select_file_select[100]EWRAM_BSS;
 u32 folder_select;
@@ -488,17 +490,18 @@ u32 set_savbak(){
 	Show_MENU_btn();
 	u16 keysdown;
 	u32 out;
+	sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "SAVBAK");
 	while(1){
 		VBlankIntrWait();
 		scanKeys();
 		keysdown = keysDown();
 		if (keysdown & KEY_A) {
-			f_mkdir("/FLAGS");
-			f_open(&gfile, "/FLAGS/SAVBAK", FA_WRITE | FA_CREATE_ALWAYS);
+			f_mkdir(FLAGS_FOLDER);
+			f_open(&gfile, str_buffer[0], FA_WRITE | FA_CREATE_ALWAYS);
 			f_close(&gfile);
 		}
 		else if(keysdown & KEY_B){
-			f_unlink("/FLAGS/SAVBAK");
+			f_unlink(str_buffer[0]);
 		}
 		else if(keysdown & KEY_L){
 			out = 0;
@@ -513,7 +516,9 @@ u32 set_savbak(){
 }
 //---------------------------------------------------------------------------------
 void Themes_init(){
-	if (f_stat("/FLAGS/USETHEME", NULL) == FR_OK && f_open(&themefile,"/THEMES/ODE", FA_READ) == FR_OK){
+	sprintf(str_buffer[0],"%s/%s",FLAGS_FOLDER,"USETHEME");
+	sprintf(str_buffer[1],"%s/%s",THEMES_FOLDER,"ODE");
+	if (f_stat(str_buffer[0], NULL) == FR_OK && f_open(&themefile,str_buffer[1], FA_READ) == FR_OK){
 		UINT theme_ret;
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
@@ -541,18 +546,19 @@ u32 set_usetheme() {
 	Show_MENU_btn();
 	u16 keysdown;
 	u32 out;
+	sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "USETHEME");
 	while (1) {
 		VBlankIntrWait();
 		scanKeys();
 		keysdown = keysDown();
 		if (keysdown & KEY_A) {
-			f_mkdir("/FLAGS");
-			f_open(&gfile, "/FLAGS/USETHEME", FA_WRITE | FA_CREATE_ALWAYS);
+			f_mkdir(FLAGS_FOLDER);
+			f_open(&gfile, str_buffer[0], FA_WRITE | FA_CREATE_ALWAYS);
 			f_close(&gfile);
 			Themes_init();
 		}
 		else if (keysdown & KEY_B) {
-			f_unlink("/FLAGS/USETHEME");
+			f_unlink(str_buffer[0]);
 		}
 		else if (keysdown & KEY_L) {
 			out = 0;
@@ -878,7 +884,8 @@ u32  get_count(void)
 	u32 res;
 	u32 count=0;
 	char buf[512];	
-	res = f_open(&gfile,"/SAVER/Recently play.txt", FA_READ);	
+	sprintf(str_buffer[0],"%s/%s",SAVER_FOLDER,"Recently play.txt");
+	res = f_open(&gfile, str_buffer[0], FA_READ);	
 	if(res == FR_OK)//have a play file
 	{
 		f_lseek(&gfile, 0x0);
@@ -977,7 +984,7 @@ void Make_recently_play_file(TCHAR* path,TCHAR* gamefilename)
 	int get=1;
 	char buf[512];	
 	
-	//res=f_chdir("/SAVER");
+	//res=f_chdir(SAVER_FOLDER);
 	//is in SAVER
 	count = get_count();
 		
@@ -1400,7 +1407,7 @@ void CheckLanguage(void)
 	{
 		LoadEnglish();
 	}
-	else//????
+	else//����
 	{
 		LoadChinese();
 	}
@@ -1831,7 +1838,7 @@ u32 Load_Thumbnail(TCHAR *pfilename_pic)
 		f_close(&gfile);
 					
 		memset(picpath,00,30);
-		sprintf(picpath,"/IMGS/%c/%c/%c%c%c%c.bmp",GAMECODE[0],GAMECODE[1],GAMECODE[0],GAMECODE[1],GAMECODE[2],GAMECODE[3]);						
+		sprintf(picpath,"%s/%c/%c/%c%c%c%c.bmp",IMGS_FOLDER,GAMECODE[0],GAMECODE[1],GAMECODE[0],GAMECODE[1],GAMECODE[2],GAMECODE[3]);						
 		res = f_open(&gfile,picpath, FA_READ);
 		if(res == FR_OK)
 		{
@@ -1882,19 +1889,19 @@ u32 Check_file_type(TCHAR *pfilename)
 
 	ext++;
 
-	sprintf(plugin, "/plugins/%s.bin", ext);
+	sprintf(plugin, "%s/%s.bin", PLUGINS_FOLDER, ext);
 	res = f_stat(plugin, NULL);
 	if(res == FR_OK)
 		return 4;
-	sprintf(plugin, "/plugins/%s.gba", ext);
+	sprintf(plugin, "%s/%s.gba", PLUGINS_FOLDER, ext);
 	res = f_stat(plugin, NULL);
 	if(res == FR_OK)
 		return 5;
-	sprintf(plugin, "/plugins/%s.mb", ext);
+	sprintf(plugin, "%s/%s.mb", PLUGINS_FOLDER, ext);
 	res = f_stat(plugin, NULL);
 	if(res == FR_OK)
 		return 6;
-	sprintf(plugin, "/plugins/%s.mbz", ext);
+	sprintf(plugin, "%s/%s.mbz", PLUGINS_FOLDER, ext);
 	res = f_stat(plugin, NULL);
 	if(res == FR_OK)
 		return 7;
@@ -2148,11 +2155,12 @@ void Check_save_flag(void)
 		scanKeys();
 		u16 keysdown  = keysDown();
 			
+		sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "SAVBAK");
 		if((gl_auto_save_sel) & !(keysdown & KEY_L)){
 								DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 					f_mkdir(SAVER_FOLDER);//"/SAVER"
 					f_chdir(SAVER_FOLDER); 
-			if(f_stat("/FLAGS/SAVBAK", NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
+			if(f_stat(str_buffer[0], NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);	
 		}
 				else if (!(keysdown & KEY_L)){
@@ -2165,7 +2173,7 @@ void Check_save_flag(void)
 						DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
 						f_mkdir(SAVER_FOLDER);
 						f_chdir(SAVER_FOLDER);
-					if(f_stat("/FLAGS/SAVBAK", NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
+					if(f_stat(str_buffer[0], NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);
 						/*TCHAR bmpfilename[100];	
 						u32 bmpnum;
@@ -3038,10 +3046,12 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 		switch (is_EMU)
 		{
 		case 0xfe:
-			dst = "/THEMES/O";
+			sprintf(str_buffer[0], "%s/%s", THEMES_FOLDER, "O");
+			dst = str_buffer[0];
 			break;
 		case 0xfd:
-			dst = "/THEMES/ODE";
+			sprintf(str_buffer[0], "%s/%s", THEMES_FOLDER, "ODE");
+			dst = str_buffer[0];
 			break;
 		default:
 			break;
