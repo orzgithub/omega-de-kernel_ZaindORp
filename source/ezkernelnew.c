@@ -31,7 +31,6 @@
 #include "pocketnes.h"
 
 
-
 FM_FILE_FS pFilename_buffer[MAX_files]EWRAM_BSS;
 FM_NOR_FS pNorFS[MAX_NOR]EWRAM_BSS;
 FM_Folder_FS pFolder[MAX_folder]EWRAM_BSS;
@@ -47,8 +46,6 @@ TCHAR currentpath_temp[MAX_path_len];
 TCHAR current_filename[200];
 
 TCHAR plugin[100]; //pogoshell plugin
-
-TCHAR str_buffer[1][50];
 
 u8 p_folder_select_show_offset[100]EWRAM_BSS;
 u8 p_folder_select_file_select[100]EWRAM_BSS;
@@ -488,8 +485,7 @@ void Show_MENU_btn()
 }
 //---------------------------------------------------------------------------------
 void Themes_init(){
-	sprintf(str_buffer[0],"%s/%s",THEMES_FOLDER,"ODE");
-	if (get_set_custom_info("USETHEME") && f_open(&themefile,str_buffer[0], FA_READ) == FR_OK){
+	if (get_set_custom_info("USETHEME") && f_open(&themefile,PATH_JOIN(THEMES_FOLDER, "/ODE"), FA_READ) == FR_OK){
 		UINT theme_ret;
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
@@ -824,8 +820,7 @@ u32  get_count(void)
 	u32 res;
 	u32 count=0;
 	char buf[512];	
-	sprintf(str_buffer[0],"%s/%s",SAVER_FOLDER,"Recently play.txt");
-	res = f_open(&gfile, str_buffer[0], FA_READ);	
+	res = f_open(&gfile, PATH_JOIN(SAVER_FOLDER, "/Recently play.txt"), FA_READ);	
 	if(res == FR_OK)//have a play file
 	{
 		f_lseek(&gfile, 0x0);
@@ -1347,7 +1342,7 @@ void CheckLanguage(void)
 	{
 		LoadEnglish();
 	}
-	else//ï¿½ï¿½ï¿½ï¿½
+	else//ÖÐÎÄ
 	{
 		LoadChinese();
 	}
@@ -2973,12 +2968,10 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 		switch (is_EMU)
 		{
 		case 0xfe:
-			sprintf(str_buffer[0], "%s/%s", THEMES_FOLDER, "O");
-			dst = str_buffer[0];
+			dst = PATH_JOIN(THEMES_FOLDER, "/O");
 			break;
 		case 0xfd:
-			sprintf(str_buffer[0], "%s/%s", THEMES_FOLDER, "ODE");
-			dst = str_buffer[0];
+			dst = PATH_JOIN(THEMES_FOLDER, "/ODE");
 			break;
 		default:
 			break;

@@ -54,6 +54,8 @@
 #define  DMA_COPY_MODE 0X1
 #define  SET_PARAMETER_MODE  0x2
 
+#define PATH_JOIN(base, path) base path
+
 //#define gImage_Chinese_manual 	(void*)0x08100000
 //#define gImage_English_manual 	(void*)0x08102648
 //#define gImage_splash						(void*)0x08104C90
