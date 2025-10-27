@@ -37,8 +37,7 @@ typedef enum {
 	SET_win=2,
 	SET2_win=3,
 	HELP=4,
-	SET_sbak=5,
-	SET_USETHEME=6,
+	SET_custom_win=5,
 }PAGE_NUM ;
 //----------------------------
 extern DWORD Get_NextCluster(	FFOBJID* obj,	DWORD clst);
@@ -68,10 +67,12 @@ extern u16 gl_color_btn_clean;
 
 u32 Setting_window(void);
 u32 Setting_window2(void);
+u32 Setting_window_custom1(void);
 
 void delay(u32 R0);
 u32 LoadRTSfile(TCHAR *filename);
 void ShowTime(u32 page_num ,u32 page_mode);
 u8 NOR_list_MENU(u32 show_offset,	u32 file_select);
 u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re);
+void Themes_init();
 //#endif

@@ -25,6 +25,8 @@
 
 #include "images.h"
 
+#include "set_flag.h"
+
 #include "jagoombacolor.h"
 #include "pocketnes.h"
 
@@ -46,7 +48,7 @@ TCHAR current_filename[200];
 
 TCHAR plugin[100]; //pogoshell plugin
 
-TCHAR str_buffer[2][20];
+TCHAR str_buffer[1][50];
 
 u8 p_folder_select_show_offset[100]EWRAM_BSS;
 u8 p_folder_select_file_select[100]EWRAM_BSS;
@@ -485,40 +487,9 @@ void Show_MENU_btn()
 	DrawHZText12(msg,0,60,118, gl_color_text,1);
 }
 //---------------------------------------------------------------------------------
-u32 set_savbak(){
-	DrawHZText12(gl_savbak,0,20,28,gl_color_text,1);//use sure?gl_LSTART_help
-	Show_MENU_btn();
-	u16 keysdown;
-	u32 out;
-	sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "SAVBAK");
-	while(1){
-		VBlankIntrWait();
-		scanKeys();
-		keysdown = keysDown();
-		if (keysdown & KEY_A) {
-			f_mkdir(FLAGS_FOLDER);
-			f_open(&gfile, str_buffer[0], FA_WRITE | FA_CREATE_ALWAYS);
-			f_close(&gfile);
-		}
-		else if(keysdown & KEY_B){
-			f_unlink(str_buffer[0]);
-		}
-		else if(keysdown & KEY_L){
-			out = 0;
-			break;
-		}
-		else if(keysdown & KEY_R){
-			out = 1;
-			break;
-		}
-	}
-	return out;
-}
-//---------------------------------------------------------------------------------
 void Themes_init(){
-	sprintf(str_buffer[0],"%s/%s",FLAGS_FOLDER,"USETHEME");
-	sprintf(str_buffer[1],"%s/%s",THEMES_FOLDER,"ODE");
-	if (f_stat(str_buffer[0], NULL) == FR_OK && f_open(&themefile,str_buffer[1], FA_READ) == FR_OK){
+	sprintf(str_buffer[0],"%s/%s",THEMES_FOLDER,"ODE");
+	if (get_set_custom_info("USETHEME") && f_open(&themefile,str_buffer[0], FA_READ) == FR_OK){
 		UINT theme_ret;
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
@@ -539,37 +510,6 @@ void Themes_init(){
 		usetheme = 0;
 		set_default_theme();
 	}
-}
-//---------------------------------------------------------------------------------
-u32 set_usetheme() {
-	DrawHZText12(gl_settheme, 0, 20, 28, gl_color_text, 1);//use sure?gl_LSTART_help
-	Show_MENU_btn();
-	u16 keysdown;
-	u32 out;
-	sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "USETHEME");
-	while (1) {
-		VBlankIntrWait();
-		scanKeys();
-		keysdown = keysDown();
-		if (keysdown & KEY_A) {
-			f_mkdir(FLAGS_FOLDER);
-			f_open(&gfile, str_buffer[0], FA_WRITE | FA_CREATE_ALWAYS);
-			f_close(&gfile);
-			Themes_init();
-		}
-		else if (keysdown & KEY_B) {
-			f_unlink(str_buffer[0]);
-		}
-		else if (keysdown & KEY_L) {
-			out = 0;
-			break;
-		}
-		else if (keysdown & KEY_R) {
-			out = 1;
-			break;
-		}
-	}
-	return out;
 }
 //---------------------------------------------------------------------------------
 void Show_ICON_filename_NOR(u32 show_offset,u32 file_select)
@@ -2154,13 +2094,14 @@ void Check_save_flag(void)
 			
 		scanKeys();
 		u16 keysdown  = keysDown();
+
+		
+		f_mkdir(SAVER_FOLDER);//"/SAVER"
+		f_chdir(SAVER_FOLDER); 
+		if(get_set_custom_info("SAVBAK")) Process_savbak((TCHAR *)SAV_info_buffer);
 			
-		sprintf(str_buffer[0], "%s/%s", FLAGS_FOLDER, "SAVBAK");
 		if((gl_auto_save_sel) & !(keysdown & KEY_L)){
 								DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
-					f_mkdir(SAVER_FOLDER);//"/SAVER"
-					f_chdir(SAVER_FOLDER); 
-			if(f_stat(str_buffer[0], NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);	
 		}
 				else if (!(keysdown & KEY_L)){
@@ -2171,9 +2112,6 @@ void Check_save_flag(void)
 					u16 keysdown  = keysDown();
 					if (keysdown & KEY_A) {
 						DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
-						f_mkdir(SAVER_FOLDER);
-						f_chdir(SAVER_FOLDER);
-					if(f_stat(str_buffer[0], NULL) == FR_OK) Process_savbak((TCHAR *)SAV_info_buffer);
 						Save_savefile((TCHAR *)SAV_info_buffer,savefilesize);
 						/*TCHAR bmpfilename[100];	
 						u32 bmpnum;
@@ -2469,32 +2407,21 @@ re_showfile:
 					}
 					else{
 						DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
-						page_num = SET_sbak;//SAVEBAK
+						page_num = SET_custom_win;//set custom
 					}
 					
 					goto re_showfile;
 	    	}
-	    	else if(page_num==SET_sbak){
-				res = set_savbak();
+	    	else if(page_num==SET_custom_win){
+				DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
+				res = Setting_window_custom1();
 				if(res==0){
 					DrawPic((u16*)gImage_HELP, 0, 0, 240, 160, 0, 0, 1);
 					page_num = HELP;//HELP
 				}
 				else{
 					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
-					page_num = SET_USETHEME;//THEMESET
-				}
-				goto re_showfile;
-	    	}
-	    	else if(page_num==SET_USETHEME){
-				res = set_usetheme();
-				if(res==0){
-					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
-					page_num = SET_sbak;//SAVBAK
-				}
-				else{
-					DrawPic((u16*)gImage_RECENTLY, 0, 0, 240, 160, 0, 0, 1);
-					page_num = SET_USETHEME;//THEMESET
+					page_num = SET_custom_win;//set custom
 				}
 				goto re_showfile;
 	    	}

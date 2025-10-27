@@ -13,6 +13,7 @@
 
 #include "images.h"
 #include "transflag.h"
+#include "set_flag.h"
 
 #define USEEASTER 0
 // These easters were broken on newer version of Devkit pro so set to 1 only when you are using an older compliator.
@@ -46,9 +47,7 @@ u32 Show_help_window()
 	else{
 		DrawPic((u16*)gImage_Chinese_manual, 240-70, 160-70, 70, 70, 0, 0, 1);//
 	}
-	char trans_flag[25];
-	sprintf(trans_flag, "%s/%s", FLAGS_FOLDER, "I_SUPPORT_TRANSGENDER");
-	if (f_stat(trans_flag, NULL) != FR_OK){
+	if (!get_set_custom_info("I_SUPPORT_TRANSGENDER")){
 		DrawPic((u16*)transflag, 240-70-14, 160-70, 14, 70, 0, 0, 1);
 	}
 	DrawHZText12("START  :",0,3,20, gl_color_selected,1);
