@@ -34,6 +34,7 @@ ARCH	:=	-mthumb -mthumb-interwork
 
 CFLAGS	:=	-g -Wall -Os\
 		-mcpu=arm7tdmi -mtune=arm7tdmi\
+		-fexec-charset=GBK\
 		$(ARCH)
 
 CFLAGS	+=	$(INCLUDE)

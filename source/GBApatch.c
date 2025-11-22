@@ -64,7 +64,7 @@ void Write(u32 romaddress, const u8* buffer, u32 size)
 		SetPSRampage(page);
 		
 		for(x=0;x<size/2;x++)
-			((vu16*)(PSRAMBase_S98 + Address))[x] = ((vu16*)buffer)[x];//todo ��Ҫ����psram page
+			((vu16*)(PSRAMBase_S98 + Address))[x] = ((vu16*)buffer)[x];//todo 还要处理psram page
 						
 		//DEBUG_printf("address{%x}:%x %x %x %x", romaddress,page,Address,size ,((vu32*)buffer)[0]);
 		SetPSRampage(0);
@@ -253,7 +253,7 @@ void IWRAM_CODE PatchInternal(u32* Data,int iSize,u32 offset)
     {
       case 0x3007FFC: // IRQ handler
         {
-          Add2(ii, 0x3007FF4);//0x3007FFC��λ��
+          Add2(ii, 0x3007FF4);//0x3007FFC的位置
         }
         break;
       case 0x3FFFFFC: // IRQ handler
@@ -391,7 +391,7 @@ void Patch_Reset_Sleep(u32 *Data)
   u32 Return_address_offset = p_patch_Return_address_L-p_patch_start;
 
   dmaCopy((void*)p_patch_start,patchbuffer, p_patch_end-p_patch_start);
-  *(vu32*)(patchbuffer+Return_address_offset) = Return_address;//�޸�gba_sleep_patch_bin����ķ��ص�ַ
+  *(vu32*)(patchbuffer+Return_address_offset) = Return_address;//修改gba_sleep_patch_bin里面的返回地址
 
 	u16 read5 = Read_SET_info(assress_edit_sleephotkey_0); 
 	u16 read6 = Read_SET_info(assress_edit_sleephotkey_1); 

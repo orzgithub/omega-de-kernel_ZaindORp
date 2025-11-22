@@ -1342,7 +1342,7 @@ void CheckLanguage(void)
 	{
 		LoadEnglish();
 	}
-	else//ÖÐÎÄ
+	else//ä¸­æ–‡
 	{
 		LoadChinese();
 	}
