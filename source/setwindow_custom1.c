@@ -17,7 +17,7 @@
 
 #define LINE_TOTAL 2
 #define Y_OFFSET 24
-#define LINE_HEIGHT 20
+#define LINE_HEIGHT 17
 #define OPTION_X (240 - 20)
 #define SELECTION_MARK_X (240 - 26)
 #define SELECTION_MARK_WIDTH 4
