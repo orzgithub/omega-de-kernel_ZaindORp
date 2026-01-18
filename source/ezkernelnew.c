@@ -2652,7 +2652,7 @@ re_showfile:
 				if(page_num==SD_list){//only work on sd list								
 					if(key_L)
 					{
-						if(show_offset+file_select >= folder_total){
+						if(show_offset+file_select >= folder_total && game_total_SD > 0){
 							SD_list_L_START(show_offset,file_select,folder_total);
 							goto refind_file;	
 						}				
