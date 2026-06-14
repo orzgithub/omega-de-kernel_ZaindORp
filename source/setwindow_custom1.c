@@ -15,7 +15,7 @@
 
 #include "images.h"
 
-#define LINE_TOTAL 2
+#define LINE_TOTAL 3
 #define Y_OFFSET 24
 #define LINE_HEIGHT 17
 #define OPTION_X (240 - 20)
@@ -26,6 +26,7 @@
 
 #define FLAG_USETHEME "USETHEME"
 #define FLAG_SAVBAK "SAVBAK"
+#define FLAG_ALLOW_DELETE_MIDDLE "ALLOW_DELETE_MIDDLE"
 #define FLAG_TRANSGENDER "I_SUPPORT_TRANSGENDER"
 
 TCHAR flag_path_buffer[50];
@@ -61,6 +62,7 @@ u32 Setting_window_custom1(void)
 
     u8 status_use_theme = get_set_custom_info(FLAG_USETHEME);
     u8 status_save_backup = get_set_custom_info(FLAG_SAVBAK);
+    u8 status_allow_delete_middle = get_set_custom_info(FLAG_ALLOW_DELETE_MIDDLE);
     u8 status_transgender_flag = get_set_custom_info(FLAG_TRANSGENDER);
 
 	#define SELECTION_MARK_Y(line) (Y_OFFSET + (line) * LINE_HEIGHT + 2 + (8 - SELECTION_MARK_HEIGHT) / 2)
@@ -79,10 +81,14 @@ u32 Setting_window_custom1(void)
             DrawHZText12(msg, 0, TEXT_X_OFFSET, Y_OFFSET + LINE_HEIGHT * 1, gl_color_selected, 1);
             Draw_select_icon(OPTION_X, Y_OFFSET + LINE_HEIGHT * 1, status_save_backup);
 
+            sprintf(msg, "%s", gl_set_custom_nor_allow_delete_middle);
+            DrawHZText12(msg, 0, TEXT_X_OFFSET, Y_OFFSET + LINE_HEIGHT * 2, gl_color_selected, 1);
+            Draw_select_icon(OPTION_X, Y_OFFSET + LINE_HEIGHT * 2, status_allow_delete_middle);
+
             /*
 			sprintf(msg, "%s", gl_set_custom_transgender_flag);
-            DrawHZText12(msg, 0, TEXT_X_OFFSET, Y_OFFSET + LINE_HEIGHT * 2, gl_color_selected, 1);
-            Draw_select_icon(OPTION_X, Y_OFFSET + LINE_HEIGHT * 2, status_transgender_flag);
+            DrawHZText12(msg, 0, TEXT_X_OFFSET, Y_OFFSET + LINE_HEIGHT * 3, gl_color_selected, 1);
+            Draw_select_icon(OPTION_X, Y_OFFSET + LINE_HEIGHT * 3, status_transgender_flag);
 			*/
 
             for(u32 line = 0; line < LINE_TOTAL; line++)
@@ -109,6 +115,10 @@ u32 Setting_window_custom1(void)
                     save_set_custom_info(FLAG_SAVBAK, status_save_backup);
                     break;
                 case 2:
+                    status_allow_delete_middle = !status_allow_delete_middle;
+                    save_set_custom_info(FLAG_ALLOW_DELETE_MIDDLE, status_allow_delete_middle);
+                    break;
+                case 3:
                     status_transgender_flag = !status_transgender_flag;
                     save_set_custom_info(FLAG_TRANSGENDER, status_transgender_flag);
                     break;

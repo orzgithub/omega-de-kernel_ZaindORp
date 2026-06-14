@@ -2888,8 +2888,9 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 			}
 			else if(MENU_line==1){
 				//delete lastest geme
-				if(show_offset+file_select+1 == game_total_NOR){
-					Block_Erase(gl_norOffset-pNorFS[show_offset+file_select].filesize);
+				if(show_offset+file_select+1 == game_total_NOR || get_set_custom_info("ALLOW_DELETE_MIDDLE") == 1){
+					DeleteFile(show_offset+file_select);
+					// Block_Erase(gl_norOffset-pNorFS[show_offset+file_select].filesize);
 				}
 				else{
 					DrawHZText12(gl_lastest_game,0,66,118-15,gl_color_text,1);	

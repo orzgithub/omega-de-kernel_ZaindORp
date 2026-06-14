@@ -102,6 +102,7 @@ extern char* gl_settheme;
 
 extern char* gl_set_custom_use_theme;
 extern char* gl_set_custom_save_backup;
+extern char* gl_set_custom_nor_allow_delete_middle;
 extern char* gl_set_custom_transgender_flag;
 
 extern char* gl_modver;

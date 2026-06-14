@@ -132,6 +132,8 @@ void FormatNor()
 		if (keys & KEY_A) {
 			Chip_Erase();
 			memset(pNorFS,00,sizeof(FM_NOR_FS)*MAX_NOR);
+			game_total_NOR = 0;
+			Save_NOR_info((u16*)pNorFS, sizeof(FM_NOR_FS)*MAX_NOR);
 			return;
 		}
 		else if(keys & KEY_B) {
@@ -209,6 +211,81 @@ void IWRAM_CODE WriteFlash_with32word(u32 address,u8 *buffer,u32 size)
 	}
 	SetRompage(gl_currentpage);
 }
+
+//-----------------------------------------------------------
+static int AllocBlocks(u32 needed_blocks, u32 *start_block) {
+    typedef struct { u32 start, end; } Range;
+    Range occupied[MAX_NOR];
+    int occ_count = 0;
+
+    for (int i = 0; i < game_total_NOR; i++) {
+        u32 blocks = (pNorFS[i].filesize + S29_BLOCK_SIZE - 1) / S29_BLOCK_SIZE;
+        occupied[occ_count].start = pNorFS[i].rompage;
+        occupied[occ_count].end   = pNorFS[i].rompage + blocks - 1;
+        occ_count++;
+    }
+
+    for (int i = 1; i < occ_count; i++) {
+        Range tmp = occupied[i];
+        int j = i - 1;
+        while (j >= 0 && occupied[j].start > tmp.start) {
+            occupied[j+1] = occupied[j];
+            j--;
+        }
+        occupied[j+1] = tmp;
+    }
+
+    int merged = 0;
+    for (int i = 1; i < occ_count; i++) {
+        if (occupied[i].start <= occupied[merged].end + 1) {
+            if (occupied[i].end > occupied[merged].end)
+                occupied[merged].end = occupied[i].end;
+        } else {
+            merged++;
+            occupied[merged] = occupied[i];
+        }
+    }
+    occ_count = merged + 1;
+
+    u32 best_start = 0xFFFFFFFF, best_len = 0xFFFFFFFF;
+    u32 current = 0;
+
+    for (int i = 0; i < occ_count; i++) {
+        if (occupied[i].start > current) {
+            u32 free_len = occupied[i].start - current;
+            if (free_len >= needed_blocks && free_len < best_len) {
+                best_len = free_len;
+                best_start = current;
+            }
+        }
+        current = occupied[i].end + 1;
+    }
+    if (current < S29_TOTAL_BLOCKS) {
+        u32 free_len = S29_TOTAL_BLOCKS - current;
+        if (free_len >= needed_blocks && free_len < best_len) {
+            best_len = free_len;
+            best_start = current;
+        }
+    }
+
+    if (best_start == 0xFFFFFFFF) return 0;
+    *start_block = best_start;
+    return 1;
+}
+//-----------------------------------------------------------
+int DeleteFile(int index) {
+    if (index < 0 || index >= game_total_NOR) return 0;
+
+    for (int i = index; i < game_total_NOR - 1; i++) {
+        memcpy(&pNorFS[i], &pNorFS[i + 1], sizeof(FM_NOR_FS));
+    }
+    memset(&pNorFS[game_total_NOR - 1], 0, sizeof(FM_NOR_FS));
+    game_total_NOR--;
+
+    Save_NOR_info((u16*)pNorFS, sizeof(FM_NOR_FS) * MAX_NOR);
+    return 1;
+}
+
 //-----------------------------------------------------------
 u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 {
@@ -248,7 +325,6 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 		}	
 
 		memcpy(tmpNorFS.gamename,temp,0x10);
-		tmpNorFS.rompage = NORaddress >> 17;
 		
 		fileneedsize = ((((filesize+0x1FFFF)/0x20000)*0x20000));
 		if(have_patch)
@@ -259,13 +335,21 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 				add_patch = 1;
 			}
 		}
-			
-		if(	fileneedsize > (0x4000000-NORaddress)){
-			return 2; //Not enough NOR space 
+		
+		u32 needed_blocks = (fileneedsize + S29_BLOCK_SIZE - 1) / S29_BLOCK_SIZE;
+		u32 start_block;
+		if (!AllocBlocks(needed_blocks, &start_block)) {
+			f_close(&gfile);
+			return 2;
+		}
+		u32 alloc_address = start_block * S29_BLOCK_SIZE;
+
+		if (game_total_NOR >= MAX_NOR) {
+			f_close(&gfile);
+			return 3;
 		}
 
-		
-		////////////////// erase all BBP
+
 		*((vu16 *)(FlashBase_S98)) = 0xF0 ;	
 		
 		*((vu16 *)(FlashBase_S98+0x555*2)) = 0xAA ;
@@ -286,7 +370,8 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 		*((vu16 *)(FlashBase_S98+0x000*2)) = 0x00 ;			
 		/////////////////		
 		
-			
+
+		tmpNorFS.rompage = start_block;
 		tmpNorFS.filesize = fileneedsize;
 		tmpNorFS.have_patch = have_patch;
 		tmpNorFS.have_RTS = gl_rts_on;
@@ -295,7 +380,8 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 		
 		sprintf(tmpNorFS.filename,"%s",filename);
 		dmaCopy(&tmpNorFS,&pNorFS[game_total_NOR], sizeof(FM_NOR_FS));
- 
+		game_total_NOR++;
+
 		Clear(60,160-15,120,15,gl_color_cheat_black,1);	
 		DrawHZText12(gl_writing,0,70,160-15,gl_color_text,1);	
 		for(blocknum=0;blocknum<filesize;blocknum+=0x20000)
@@ -303,7 +389,7 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 			sprintf(msg,"%luMb/%luMb",(blocknum)/0x20000,filesize/0x20000);
 			Clear(70+54,160-15,100,15,gl_color_cheat_black,1);
 			DrawHZText12(msg,0,70+54,160-15,gl_color_text,1);
-			Block_Erase(blocknum+NORaddress);
+			Block_Erase(blocknum + alloc_address);
 
 			f_lseek(&gfile, blocknum);
 			f_read(&gfile, pReadCache, 0x20000, (UINT *)&ret);//pReadCache max 0x20000 Byte
@@ -318,7 +404,7 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 				GBApatch_Cleanrom_NOR((u32*)pReadCache,blocknum);
 			}
 				
-			WriteFlash_with32word(blocknum+NORaddress,pReadCache,0x20000);
+			WriteFlash_with32word(blocknum + alloc_address, pReadCache, 0x20000);
 			//WriteFlash(blocknum+NORaddress,pReadCache,0x20000);
 
 		}
@@ -328,13 +414,13 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 		{
 			if(add_patch)
 			{
-				Block_Erase(blocknum+NORaddress);
+				Block_Erase(blocknum + alloc_address);
 				GBApatch_NOR((u32*)pReadCache,0x20000,blocknum);
-				WriteFlash_with32word(blocknum+NORaddress,pReadCache,0x20000);
+				WriteFlash_with32word(blocknum + alloc_address,pReadCache,0x20000);
 			}
 		}
 		
-		Save_NOR_info((u16*)pNorFS,sizeof(FM_NOR_FS)*0x40);
+		Save_NOR_info((u16*)pNorFS,sizeof(FM_NOR_FS)*MAX_NOR);
 		return 0;
 	}		
 	else
@@ -348,64 +434,11 @@ u32 Loadfile2NOR(TCHAR *filename, u32 NORaddress,u16 have_patch,u8 SAVEMODE)
 //-----------------------------------------------------------
 u32 GetFileListFromNor(void)
 {
-	REG_IME = 0 ;
-	u32 page=0 ,count=0;
-	u32 StartAddress = FlashBase_S98;
-	//FM_NOR_FS tmpNorFS ;
-	char temp[50];
-	vu16  Value;
-
-	Value = *(vu16 *)(StartAddress + 0xbe);
-	u16 x24 = *(vu16 *)(StartAddress + 0x6);
-
-	//DEBUG_printf(" %x %x %x",StartAddress,Value,x24);
-
-	while( ((Value&0xFF)==0xCE) || ((Value&0xFF)==0xCF)|| ((Value&0xFF)==0x00)|| (x24==0x51ae))
-	{
-		//DEBUG_printf(" %x %x %x",StartAddress,Value,x24);
-		if(*(vu8 *)(StartAddress+0xb2) == 0x96)
-		{
-			memcpy(temp,(char*)(StartAddress+0xa0),0x10);
-			//temp[12] = 0 ;
-
-			//DEBUG_printf("  %s VS %s",temp ,pNorFS[count].gamename);
-			
-			if(memcmp(temp,pNorFS[count].gamename,0x10) ==0) //if(!strcasecmp(temp, pNorFS[count].gamename))
-			{
-				gl_norOffset += pNorFS[count].filesize;
-				StartAddress += pNorFS[count].filesize;
-				count ++ ;
-			}
-			else 
-			{
-				break;
-			}
-		}
-		else
-		{
-			break;
-		}		
-
-		while(StartAddress >= FlashBase_S98_end)
-		{
-			page += 0x1000 ;
-			if(page>0x7000)
-			{
-				SetRompage(gl_currentpage);
-				return count;
-			}
-			SetRompage(gl_currentpage+page);
-			StartAddress -= 0x800000 ;
-		}
-		if(count > MAX_NOR) 
-			break; //max
-			
-		Value = *(vu16 *)(StartAddress + 0xbe);
-		x24 = *(vu16 *)(StartAddress + 0x6);
+	game_total_NOR = 0;
+	while (game_total_NOR < MAX_NOR && pNorFS[game_total_NOR].filesize != 0) {
+		game_total_NOR++;
 	}
-	SetRompage(gl_currentpage);
-
-	REG_IME   = 1 ;
-	return count ;
+	gl_norOffset = 0;
+	return game_total_NOR;
 }
 //-----------------------------------------------------------

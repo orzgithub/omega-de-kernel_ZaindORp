@@ -40,6 +40,8 @@
 #define NOR_info_offset 0x7A0000
 #define SET_info_offset 0x7B0000
 
+#define S29_BLOCK_SIZE 0x20000
+#define S29_TOTAL_BLOCKS (0x4000000 / S29_BLOCK_SIZE)
 
 #define SAVER_FOLDER "/SAVER"
 #define SAVER_BACKUP_FOLDER "/SAVER/BACKUP"
