@@ -261,7 +261,7 @@ static int AllocBlocks(u32 needed_blocks, u32 *start_block) {
     return 1;
 }
 //-----------------------------------------------------------
-int DeleteFile(int index) {
+int DeleteFile(u8 index) {
     if (index < 0 || index >= game_total_NOR) return 0;
 
     for (int i = index; i < game_total_NOR - 1; i++) {

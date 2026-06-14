@@ -701,10 +701,10 @@ void Show_MENU(u32 menu_select,PAGE_NUM page,u32 havecht,u32 Save_num,u32 is_men
 	u32 linemax;// = (page==NOR_list)?3:(5+havecht);
 	if(page==NOR_list){
 		if(firstgame){
-			linemax = 5;//load and save sav file
+			linemax = 6;//load and save sav file
 		}
 		else {
-			linemax = 3;
+			linemax = 4;
 		}
 	}
 	else{
@@ -2834,11 +2834,11 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 
 			
 	//pfilename = pNorFS[show_offset+file_select].filename;
-	if(show_offset+file_select==0){
-		MENU_max = 4;	//first game	
+	if(pNorFS[show_offset+file_select].rompage == 0){
+		MENU_max = 5;	//first game	
 	}
 	else{
-		MENU_max = 2;		
+		MENU_max = 3;		
 	}
 	DrawPic((u16*)gImage_MENU, 56, 25, 128, 110, 0, 0, 1);//show menu pic		
 	Show_MENU_btn();			
@@ -2846,7 +2846,7 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 	{
 		if(re_menu)
 		{				
-			Show_MENU(MENU_line,NOR_list, 0,0,0,(show_offset+file_select==0));								
+			Show_MENU(MENU_line,NOR_list, 0,0,0,(pNorFS[show_offset+file_select].rompage == 0));								
 		}
 		VBlankIntrWait();
 		
@@ -2911,7 +2911,11 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 				FormatNor();
 				return 1;				
 			}
-			else if(MENU_line==3){ //load save data to FARM
+			else if (MENU_line==3){
+				Show_NOR_detail_window(show_offset+file_select);
+				re_menu=1;
+			}
+			else if(MENU_line==4){ //load save data to FARM
 				
 				error_num = FRAM_save_op(1);
 				if(error_num != 0){
@@ -2919,7 +2923,7 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 				}				
 				return 0;
 			}
-			else{//save FRAM data
+			else if(MENU_line==5){//save FRAM data
 				error_num = FRAM_save_op(2);
 				if(error_num != 0){
 					Show_error_num(error_num);

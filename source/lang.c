@@ -231,10 +231,11 @@ const char *zh_rom_menu[]={
 	"存档类型",
 	"金手指",
 };
-const char *zh_nor_op[5]={
+const char *zh_nor_op[6]={
 	"直接运行",
 	"删除",
 	"全部格式化",
+	"详情",
 	"加载存档到FRAM",
 	"保存FRAM存档",
 };
@@ -356,10 +357,11 @@ const char *en_rom_menu[] = {
 	"SAVE TYPE",
 	"CHEAT",
 };
-const char *en_nor_op[5]={
+const char *en_nor_op[6]={
 	"DIRECT BOOT",
 	"DELETE",
 	"FORMAT ALL",
+	"DETAIL",
 	"LOAD SAV FILE",
 	"SAVE SAV FILE",
 };	
