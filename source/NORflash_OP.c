@@ -213,59 +213,47 @@ void IWRAM_CODE WriteFlash_with32word(u32 address,u8 *buffer,u32 size)
 }
 
 //-----------------------------------------------------------
-static int AllocBlocks(u32 needed_blocks, u32 *start_block) {
-    typedef struct { u32 start, end; } Range;
-    Range occupied[MAX_NOR];
-    int occ_count = 0;
+void GenerateNORBitmap(u8 *bitmap) {
+    memset(bitmap, 0xFF, (S29_TOTAL_BLOCKS + 7) / 8);
 
     for (int i = 0; i < game_total_NOR; i++) {
         u32 blocks = (pNorFS[i].filesize + S29_BLOCK_SIZE - 1) / S29_BLOCK_SIZE;
-        occupied[occ_count].start = pNorFS[i].rompage;
-        occupied[occ_count].end   = pNorFS[i].rompage + blocks - 1;
-        occ_count++;
-    }
-
-    for (int i = 1; i < occ_count; i++) {
-        Range tmp = occupied[i];
-        int j = i - 1;
-        while (j >= 0 && occupied[j].start > tmp.start) {
-            occupied[j+1] = occupied[j];
-            j--;
-        }
-        occupied[j+1] = tmp;
-    }
-
-    int merged = 0;
-    for (int i = 1; i < occ_count; i++) {
-        if (occupied[i].start <= occupied[merged].end + 1) {
-            if (occupied[i].end > occupied[merged].end)
-                occupied[merged].end = occupied[i].end;
-        } else {
-            merged++;
-            occupied[merged] = occupied[i];
+        u32 start = pNorFS[i].rompage;
+        for (u32 j = 0; j < blocks; j++) {
+            u32 block = start + j;
+            bitmap[block / 8] &= ~(1 << (block % 8));
         }
     }
-    occ_count = merged + 1;
+}
+//-----------------------------------------------------------
+static int AllocBlocks(u32 needed_blocks, u32 *start_block) {
+    u8 bitmap[(S29_TOTAL_BLOCKS + 7) / 8];
+    GenerateNORBitmap(bitmap);
 
     u32 best_start = 0xFFFFFFFF, best_len = 0xFFFFFFFF;
-    u32 current = 0;
+    u32 cur_start = 0xFFFFFFFF, cur_len = 0;
 
-    for (int i = 0; i < occ_count; i++) {
-        if (occupied[i].start > current) {
-            u32 free_len = occupied[i].start - current;
-            if (free_len >= needed_blocks && free_len < best_len) {
-                best_len = free_len;
-                best_start = current;
+    for (u32 i = 0; i < S29_TOTAL_BLOCKS; i++) {
+        int free = (bitmap[i / 8] >> (i % 8)) & 1;
+        if (free) {
+            if (cur_start == 0xFFFFFFFF) {
+                cur_start = i;
+                cur_len = 1;
+            } else {
+                cur_len++;
             }
+        } else {
+            if (cur_len >= needed_blocks && cur_len < best_len) {
+                best_len = cur_len;
+                best_start = cur_start;
+            }
+            cur_start = 0xFFFFFFFF;
+            cur_len = 0;
         }
-        current = occupied[i].end + 1;
     }
-    if (current < S29_TOTAL_BLOCKS) {
-        u32 free_len = S29_TOTAL_BLOCKS - current;
-        if (free_len >= needed_blocks && free_len < best_len) {
-            best_len = free_len;
-            best_start = current;
-        }
+    if (cur_len >= needed_blocks && cur_len < best_len) {
+        best_len = cur_len;
+        best_start = cur_start;
     }
 
     if (best_start == 0xFFFFFFFF) return 0;

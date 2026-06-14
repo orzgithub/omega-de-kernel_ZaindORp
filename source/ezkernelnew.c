@@ -23,6 +23,8 @@
 #include "showcht.h"
 #include "helpwindow.h"
 
+#include "NORusagewindow.h"
+
 #include "images.h"
 
 #include "set_flag.h"
@@ -2678,6 +2680,12 @@ re_showfile:
 						}
 					}
 				}
+				else if (page_num==NOR_list)
+				{
+					Show_NOR_usage_window();
+					goto re_showfile;
+				}
+				
 			}
 				
 			ShowTime(page_num,page_mode);

@@ -52,6 +52,7 @@ char* gl_engine;
 char* gl_use_engine;
 
 char*  gl_recently_play;
+char* gl_nor_usage;
 
 char* gl_START_help;
 char* gl_SELECT_help;
@@ -166,6 +167,7 @@ const char zh_engine[]="     引擎";
 const char zh_use_engine[]="快速补丁引擎";
 
 const char zh_recently_play[]="最近游戏列表";
+const char zh_nor_usage[] = "NOR使用情况";
 
 const char zh_START_help[]="打开最近游戏列表";
 const char zh_SELECT_help[]="缩略图开关";
@@ -290,6 +292,7 @@ const char en_engine[]="   ENGINE";
 const char en_use_engine[]="FAST PATCH ENGINE";
 
 const char en_recently_play[]="RECENT PLAYED";
+const char en_nor_usage[] = "NOR USAGE";
 
 const char en_START_help[]="Open recently played list";
 const char en_SELECT_help[]="Thumbnail toggle";
@@ -414,6 +417,7 @@ void LoadChinese(void)
 	gl_use_engine = (char*)zh_use_engine;
 	
 	gl_recently_play = (char*)zh_recently_play;
+	gl_nor_usage = (char*)zh_nor_usage;
 
 	gl_START_help = (char*)zh_START_help;
 	gl_SELECT_help = (char*)zh_SELECT_help;
@@ -525,6 +529,7 @@ void LoadEnglish(void)
 	gl_use_engine = (char*)en_use_engine;
 	
 	gl_recently_play = (char*)en_recently_play;
+	gl_nor_usage = (char*)en_nor_usage;
 	
 	gl_START_help = (char*)en_START_help;
 	gl_SELECT_help = (char*)en_SELECT_help;

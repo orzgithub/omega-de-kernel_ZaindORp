@@ -53,6 +53,7 @@ extern char* gl_engine;
 extern char* gl_use_engine;
 
 extern char* gl_recently_play;
+extern char* gl_nor_usage;
 
 extern char* gl_START_help;
 extern char* gl_SELECT_help;
