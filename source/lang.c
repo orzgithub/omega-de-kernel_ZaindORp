@@ -221,7 +221,7 @@ const char zh_set_custom_transgender_flag[] = "隐藏跨性别旗帜";
 
 const char zh_loading_themefile[] = "加载主题文件中…";
 
-const char zh_modver[]="Mod版本：V7";
+const char zh_modver[]="Mod版本：V8";
 
 const char *zh_rom_menu[]={
 	"直接启动",
@@ -347,7 +347,7 @@ const char en_set_custom_transgender_flag[] = "HIDE TRANS FLAG";
 
 const char en_loading_themefile[] = "Loading theme file...";
 
-const char en_modver[]="Mod version:V7";
+const char en_modver[]="Mod version:V8";
 
 const char *en_rom_menu[] = {
 	"CLEAN BOOT",
