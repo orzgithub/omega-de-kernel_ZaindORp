@@ -17,6 +17,7 @@ By the way ZaindORp always call herself in the third person.
 - Use custom theme place in sd card
 - An easter egg(seems broken due to the changes of the devkitpro)
 - An transgender flag in help page(Create a file name I_SUPPORT_TRANSGENDER in the folder FLAGS to disable it)
+- Enhanced NorFlash management lets you delete any game, not just the last one, and re-burn using the freed-up space, just like their new product EZODEB. (Warning: This will affect other kernels' compatibility when reading Nor content)
 
 ## How to use the pogoshell plugins
 
@@ -107,7 +108,3 @@ Colors: (All the colors are shown as a one-pixel picture and the color of the pi
 2. Set the following environment variables in system, based on your installation path
 		PATH,DEVKITARM,DEVKITPRO,LIBGBA   
 3. Use "make" to build the kernel.
-
-## 致中国用户
-
-截至目前，雨落尚未将该项目以任何形式发布于[CSDN](https://csdn.net)及其旗下的[GitCode](https://gitcode.com)平台。若您于上述平台，名为orzgithub的用户下看到该项目，此为未经授权的仿冒行为。雨落不对该平台下看到的代码安全性做出保证，不排除其加入恶意代码，对您的GBA与卡带，以及游戏存档等数据造成破坏的可能性。
