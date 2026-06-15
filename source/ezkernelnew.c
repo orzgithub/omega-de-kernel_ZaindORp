@@ -2913,7 +2913,7 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 			}
 			else if (MENU_line==3){
 				Show_NOR_detail_window(show_offset+file_select);
-				re_menu=1;
+				return 0;
 			}
 			else if(MENU_line==4){ //load save data to FARM
 				
