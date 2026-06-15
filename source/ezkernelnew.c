@@ -3000,6 +3000,44 @@ u8 SD_list_MENU(u32 show_offset,	u32 file_select,u32 play_re )
 		DrawPic((u16*)gImage_MENU, 56, 25, 128, 110, 0, 0, 1);
 		DrawHZText12(gl_loading_themefile,0,60,28,gl_color_text,1);
 
+		FILINFO finfo;
+		if (f_stat(THEMES_FOLDER, &finfo) != FR_OK) {
+    		if (f_mkdir(THEMES_FOLDER) != FR_OK) {
+        		f_close(&gfile);
+        		return 1;
+    		}
+		}
+
+		/*
+		//Use recursive creation when THEMES_FOLDER is a multi-level directory. But for now, let's just go with the simpler version.
+		char dir_path[256];
+		strcpy(dir_path, THEMES_FOLDER);
+		char *p = dir_path;
+
+		while (*p == '/') p++;
+
+		while (1) {
+			char *next = strchr(p, '/');
+			if (next) *next = '\0';
+
+			FILINFO finfo;
+			if (f_stat(dir_path, &finfo) != FR_OK) {
+				if (f_mkdir(dir_path) != FR_OK) {
+					f_close(&gfile);
+					return 1;
+				}
+			} else if (!(finfo.fattrib & AM_DIR)) {
+				f_close(&gfile);
+        		return 1;
+    		}
+
+			if (!next) break;
+
+			*next = '/';
+			p = next + 1;
+		}
+		*/
+		
 		res = f_open(&gfile, pfilename, FA_READ);
 		if (res == FR_OK)
 		{
