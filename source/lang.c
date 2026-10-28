@@ -105,6 +105,7 @@ char* gl_set_custom_use_theme;
 char* gl_set_custom_save_backup;
 char* gl_set_custom_nor_allow_delete_middle;
 char* gl_set_custom_transgender_flag;
+char* gl_set_custom_enhanced_cheat;
 
 char* gl_loading_themefile;
 
@@ -218,6 +219,7 @@ const char zh_set_custom_use_theme[] = "使用主题";
 const char zh_set_custom_save_backup[] = "存档备份";
 const char zh_set_custom_nor_allow_delete_middle[] = "允许删除中间游戏";
 const char zh_set_custom_transgender_flag[] = "隐藏跨性别旗帜";
+const char zh_set_custom_enhanced_cheat[] = "增强金手指";
 
 const char zh_loading_themefile[] = "加载主题文件中…";
 
@@ -344,6 +346,7 @@ const char en_set_custom_use_theme[] = "USE THEME";
 const char en_set_custom_save_backup[] = "SAVE BACKUP";
 const char en_set_custom_nor_allow_delete_middle[] = "ALLOW DELETE GAME IN THE MIDDLE";
 const char en_set_custom_transgender_flag[] = "HIDE TRANS FLAG";
+const char en_set_custom_enhanced_cheat[] = "ENHANCED CHEAT";
 
 const char en_loading_themefile[] = "Loading theme file...";
 
@@ -474,6 +477,7 @@ void LoadChinese(void)
 	gl_set_custom_save_backup = (char*)zh_set_custom_save_backup;
 	gl_set_custom_nor_allow_delete_middle = (char*)zh_set_custom_nor_allow_delete_middle;
 	gl_set_custom_transgender_flag = (char*)zh_set_custom_transgender_flag;
+	gl_set_custom_enhanced_cheat = (char*)zh_set_custom_enhanced_cheat;
 	
 	gl_loading_themefile = (char*)zh_loading_themefile;
 
@@ -585,6 +589,7 @@ void LoadEnglish(void)
 	gl_set_custom_save_backup = (char*)en_set_custom_save_backup;
 	gl_set_custom_nor_allow_delete_middle = (char*)en_set_custom_nor_allow_delete_middle;
 	gl_set_custom_transgender_flag = (char*)en_set_custom_transgender_flag;
+	gl_set_custom_enhanced_cheat = (char*)en_set_custom_enhanced_cheat;
 
 	gl_loading_themefile = (char*)en_loading_themefile;
 

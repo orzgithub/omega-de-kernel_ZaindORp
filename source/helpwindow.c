@@ -47,7 +47,7 @@ u32 Show_help_window()
 	else{
 		DrawPic((u16*)gImage_Chinese_manual, 240-70, 160-70, 70, 70, 0, 0, 1);//
 	}
-	if (!get_set_custom_info("I_SUPPORT_TRANSGENDER")){
+	if (!get_set_custom_info(FLAG_TRANSGENDER)){
 		DrawPic((u16*)transflag, 240-70-14, 160-70, 14, 70, 0, 0, 1);
 	}
 	DrawHZText12("START  :",0,3,20, gl_color_selected,1);

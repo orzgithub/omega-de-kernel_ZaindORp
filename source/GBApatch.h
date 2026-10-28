@@ -61,6 +61,22 @@ extern void Fire_Emblem_iQue_patch_end(void);
 
 extern u32 gl_cheat_count;
 
+//instant cheat stub (source/gba_instant_cheat.s)
+extern void IC_ReplaceIRQ_start(void);
+extern void IC_ReplaceIRQ_end(void);
+extern void IC_Return_address_L(void);
+extern void IC_Sleep_key(void);
+extern void IC_Reset_key(void);
+extern void IC_switch(void);
+extern void IC_payload_ptr(void);
+extern void IC_spend_ptr(void);
+extern u32 gl_ic_active;
+extern u32 iTrimSize;
+extern u32 gl_ic_length;
+#define IC_PAYLOAD_BASE 0x06014000
+u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode);
+void Patch_RTS_InstantCheat(u32* Data);
+
 
 void GBApatch_Cleanrom(u32* address,int filesize);
 void GBApatch_PSRAM(u32* address,int filesize);

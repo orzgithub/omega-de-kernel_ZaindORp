@@ -722,6 +722,59 @@ void Patch_RTS_only(u32 *Data)
 	Write(iTrimSize, patchbuffer,copysize);
 }
 //------------------------------------------------------------------
+//------------------------------------------------------------------
+//instant cheat stub: same entry/IRQ hook as the other stubs, but the stub
+//body also carries a small cheat item menu and applies every enabled item
+//on each IRQ.  The payload (items/entries/glyphs/names) is built by
+//source/instcht.c into VRAM and written behind the stub.
+void Patch_RTS_InstantCheat(u32* Data)
+{
+	Patch_B_address();
+	u32 Return_address = 0x8000000 + EA_offset*4 + 8;
+
+	u8* p_patch_start = (u8*)IC_ReplaceIRQ_start;
+	u8* p_patch_end   = (u8*)IC_ReplaceIRQ_end;
+	u8* patchbuffer = (u8*)_UnusedVram;
+	u32 patchsize = p_patch_end - p_patch_start;
+
+	dmaCopy((void*)p_patch_start, patchbuffer, patchsize);
+	*(vu32*)(patchbuffer + ((u8*)IC_Return_address_L - p_patch_start)) = Return_address;
+	if(spend_address != 0)
+	{
+		*(vu32*)(patchbuffer + ((u8*)IC_spend_ptr - p_patch_start)) = spend_address;
+	}
+
+	u16 read5 = Read_SET_info(assress_edit_sleephotkey_0);
+	u16 read6 = Read_SET_info(assress_edit_sleephotkey_1);
+	u16 read7 = Read_SET_info(assress_edit_sleephotkey_2);
+	u16 read8 = Read_SET_info(assress_edit_rtshotkey_0);
+	u16 read9 = Read_SET_info(assress_edit_rtshotkey_1);
+	u16 read10 = Read_SET_info(assress_edit_rtshotkey_2);
+	u16 sleep_key = ~((1<< read5) | (1<< read6) | (1<< read7));
+	u16 menu_key = ~((1<< read8) | (1<< read9) | (1<< read10));
+
+	//the cheat menu is always reachable, so its key is written even when
+	//the plain reset hotkey is disabled
+	*(vu32*)(patchbuffer + ((u8*)IC_Reset_key - p_patch_start)) = menu_key & 0x3FF;
+	if(gl_sleep_on != 1)
+	{
+		*(vu32*)(patchbuffer + ((u8*)IC_Sleep_key - p_patch_start)) = 0;
+	}
+	else
+	{
+		*(vu32*)(patchbuffer + ((u8*)IC_Sleep_key - p_patch_start)) = sleep_key & 0x3FF;
+	}
+
+	*(vu32*)(patchbuffer + ((u8*)IC_switch - p_patch_start)) = gl_rts_on;
+	*(vu32*)(patchbuffer + ((u8*)IC_payload_ptr - p_patch_start)) = 0x08000000 + iTrimSize + patchsize;
+
+	Write(iTrimSize, patchbuffer, patchsize);
+	if(gl_ic_length != 0)
+	{
+		Write(iTrimSize + patchsize, (u8*)IC_PAYLOAD_BASE, gl_ic_length);
+	}
+}
+//------------------------------------------------------------------
 void GBApatch_Cleanrom(u32* address,int filesize)//Only once
 {
 	windows_offset = 0;
@@ -805,7 +858,12 @@ void GBApatch_PSRAM(u32* address,int filesize)//Only once
 	PatchDragonBallZ(address);
 	Patch_somegame(address);
 	
-	if( (gl_rts_on==1) && (gl_cheat_on == 0)  && (gl_reset_on == 0)  && (gl_sleep_on == 0)  ) {
+	if(gl_ic_active)
+	{
+		spend_address = Get_spend_address(address);
+		Patch_RTS_InstantCheat(address);
+	}
+	else if( (gl_rts_on==1) && (gl_cheat_on == 0)  && (gl_reset_on == 0)  && (gl_sleep_on == 0)  ) {
 		spend_address = Get_spend_address(address);
 		Patch_RTS_only(address);		
 	}
@@ -855,7 +913,11 @@ void GBApatch_NOR(u32* address,int filesize,u32 offset)
 	PatchDragonBallZ(address);
 	//Check_Fire_Emblem();
 
-	if( (gl_rts_on==1) && (gl_cheat_on == 0)  && (gl_reset_on == 0)  && (gl_sleep_on == 0)  ) {
+	if(gl_ic_active)
+	{
+		Patch_RTS_InstantCheat(address);
+	}
+	else if( (gl_rts_on==1) && (gl_cheat_on == 0)  && (gl_reset_on == 0)  && (gl_sleep_on == 0)  ) {
 		Patch_RTS_only(address);		
 	}
 	else if((gl_rts_on==1) ||  ((gl_cheat_on==1)&& (gl_cheat_count>0) ) )		

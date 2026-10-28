@@ -487,7 +487,7 @@ void Show_MENU_btn()
 }
 //---------------------------------------------------------------------------------
 void Themes_init(){
-	if (get_set_custom_info("USETHEME") && f_open(&themefile,PATH_JOIN(THEMES_FOLDER, "/ODE"), FA_READ) == FR_OK){
+	if (get_set_custom_info(FLAG_USETHEME) && f_open(&themefile,PATH_JOIN(THEMES_FOLDER, "/ODE"), FA_READ) == FR_OK){
 		UINT theme_ret;
 		usetheme = 1;
 		f_lseek(&themefile, 0x94410);
@@ -2095,7 +2095,7 @@ void Check_save_flag(void)
 		
 		f_mkdir(SAVER_FOLDER);//"/SAVER"
 		f_chdir(SAVER_FOLDER); 
-		if(get_set_custom_info("SAVBAK")) Process_savbak((TCHAR *)SAV_info_buffer);
+		if(get_set_custom_info(FLAG_SAVBAK)) Process_savbak((TCHAR *)SAV_info_buffer);
 			
 		if((gl_auto_save_sel) & !(keysdown & KEY_L)){
 								DrawHZText12(gl_save_ing,0,60,88,gl_color_text,1);//use sure?gl_LSTART_help
@@ -2896,7 +2896,7 @@ u8 NOR_list_MENU(u32 show_offset,	u32 file_select)
 			}
 			else if(MENU_line==1){
 				//delete lastest geme
-				if(show_offset+file_select+1 == game_total_NOR || get_set_custom_info("ALLOW_DELETE_MIDDLE") == 1){
+				if(show_offset+file_select+1 == game_total_NOR || get_set_custom_info(FLAG_ALLOW_DELETE_MIDDLE) == 1){
 					DeleteFile(show_offset+file_select);
 					// Block_Erase(gl_norOffset-pNorFS[show_offset+file_select].filesize);
 				}
@@ -3297,8 +3297,21 @@ re_show_menu:
 							return 0;
 						}
 					}	
-					ShowbootProgress(gl_check_pat);						
-					have_pat = Check_pat(pfilename);
+					gl_ic_active = 0;
+					if(gl_cheat_on==1)
+					{
+						gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
+					}
+					if(gl_ic_active==1)
+					{//the instant cheat payload replaces the .pat cache
+						have_pat = 0;
+					}
+					else
+					{
+						ShowbootProgress(gl_check_pat);
+						have_pat = Check_pat(pfilename);
+					}
+
 					if(have_pat==1)	
 					{			
 			    	Send_FATbuffer(FAT_table_buffer,0);//Loading rom	
@@ -3312,14 +3325,21 @@ re_show_menu:
 						f_read(&gfile, pReadCache, 0x20000, (UINT*)&ret);
 						f_close(&gfile);
 						SetTrimSize(pReadCache,gamefilesize,0x20000,0x0,SAVEMODE);						
-						if((gl_engine_sel==0) || (gl_select_lang == 0xE2E2))
+						if(gl_ic_active==1)
+						{//put the stub and its payload into the block behind the rom
+							iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
+						}
+						if((gl_ic_active==1) || (gl_engine_sel==0) || (gl_select_lang == 0xE2E2))
 						{	
 								get_find:		
 			    		FAT_table_buffer[0x1F4/4] = SET_PARAMETER_MODE;
 							Send_FATbuffer(FAT_table_buffer,1);												
 			    		res=Loadfile2PSRAM(pfilename);
-							ShowbootProgress(gl_make_pat);
-							Make_pat_file(pfilename);		    		
+							if(gl_ic_active==0)
+							{
+								ShowbootProgress(gl_make_pat);
+								Make_pat_file(pfilename);
+							}
 						}
 						else 
 						{
@@ -3335,6 +3355,7 @@ re_show_menu:
 						}
 					}	
 	    		Patch_SpecialROM_sleepmode();//
+	    		if(gl_ic_active==1) InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);//rebuild payload after rom load
 	    		GBApatch_PSRAM(PSRAMBase_S98,gamefilesize);																																			
 				}
 				else{//no select switch ,CLEAN
@@ -3373,6 +3394,11 @@ re_show_menu:
 				if((gl_reset_on==1) || (gl_rts_on==1) || (gl_sleep_on==1) || (gl_cheat_on==1))		    	
 	    	{
 	    		Patch_SpecialROM_sleepmode();//
+					gl_ic_active = 0;
+					if(gl_cheat_on==1)
+					{
+						gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
+					}
       				
 					//get the location of the patch
 					res = f_open(&gfile,pfilename, FA_READ);	
@@ -3381,9 +3407,14 @@ re_show_menu:
 						f_read(&gfile, pReadCache, 0x20000, (UINT*)&ret);
 						f_close(&gfile);
 						SetTrimSize(pReadCache,gamefilesize,0x20000,0x1,SAVEMODE);
+						if(gl_ic_active==1)
+						{//the extra block behind the rom holds the stub and payload
+							iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
+						}
 					}
 					needpatch = 1;
 				}
+				if(gl_ic_active==1) InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);//rebuild payload after trim
 				res = Loadfile2NOR(pfilename, gl_norOffset,needpatch,SAVEMODE);
 				//wait_btn();	
 				if(res==0)
