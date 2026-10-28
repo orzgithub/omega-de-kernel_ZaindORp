@@ -2819,5 +2819,7 @@ const SAVE_MODE_  __attribute__((aligned(4))) saveMODE_table[] = {
 {"BIIC",0x33},//Polarium_Advance_(Prototype,_iQue).zip
 {"AGLC",0x22},//Tomato_Adventure_(Prototype,_iQue).zip
 
+{"DLAB",0x31},//Ported game: Diablo
+
 {"FFFF",0x00}
 };
