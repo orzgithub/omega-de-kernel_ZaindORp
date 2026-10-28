@@ -6,6 +6,8 @@
 	.global  RTS_only_Return_address_L
 	.global  RTS_only_SAVE_key
 	.global  RTS_only_LOAD_key
+	.global  RTS_only_post_copy
+	.global  RTS_only_post_slots
 
 
 	
@@ -536,5 +538,22 @@ register_list:
 S_RTS_FLAG:
  	.byte  'E','Z','-','O','m','e','g','a','R','T','C','F','I','L','E','.'
 	.align	
+
+	.align
 RTS_only_ReplaceIRQ_end:
+	.align
+RTS_only_post_copy:
+	adr	r0, RTS_only_post_slots
+	ldmia	r0, {r1-r3}
+	mov	r4, #0
+RTS_only_post_zloop:
+	cmp	r1, r2
+	strlo	r4, [r1], #4
+	blo	RTS_only_post_zloop
+	bx	r3
+	.align
+RTS_only_post_slots:
+	.word	0x03000A54
+	.word	0x030018A8
+	.word	0x08019554
    .end

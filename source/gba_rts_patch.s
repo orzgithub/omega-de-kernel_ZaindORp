@@ -11,6 +11,8 @@
 	.global	 Cheat_count
 	.global	 CHEAT
 	.global  no_CHEAT_end
+	.global  RTS_post_copy
+	.global  RTS_post_slots
 	@;.global  ASCII
 	
 REG_BASE		= 0x4000000
@@ -1141,9 +1143,26 @@ RTS_switch:
 	.word 0x00000000
 Cheat_count:
 	.word 0x00000000	
+
+	.align
 no_CHEAT_end:
 CHEAT:
 	.space 0x400
 	.align
 RTS_ReplaceIRQ_end:
+	.align
+RTS_post_copy:
+	adr	r0, RTS_post_slots
+	ldmia	r0, {r1-r3}
+	mov	r4, #0
+RTS_post_zloop:
+	cmp	r1, r2
+	strlo	r4, [r1], #4
+	blo	RTS_post_zloop
+	bx	r3
+	.align
+RTS_post_slots:
+	.word	0x03000A54
+	.word	0x030018A8
+	.word	0x08019554
    .end

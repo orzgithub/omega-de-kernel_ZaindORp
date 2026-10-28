@@ -11,6 +11,8 @@
 	.global  Sleep_key
 	.global  Reset_key
 	.global  Wakeup_key
+	.global  Sleep_post_copy
+	.global  Sleep_post_slots
 
 REG_BASE		= 0x4000000
 REG_DISPCNT		= 0x00
@@ -281,4 +283,19 @@ Wakeup_key:
 	.word 0x3F3 @;start and select
 	.ltorg
 Sleep_ReplaceIRQ_end:
+	.align
+Sleep_post_copy:
+	adr	r0, Sleep_post_slots
+	ldmia	r0, {r1-r3}
+	mov	r4, #0
+Sleep_post_zloop:
+	cmp	r1, r2
+	strlo	r4, [r1], #4
+	blo	Sleep_post_zloop
+	bx	r3
+	.align
+Sleep_post_slots:
+	.word	0x03000A54
+	.word	0x030018A8
+	.word	0x08019554
    .end

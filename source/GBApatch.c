@@ -37,6 +37,164 @@ extern ST_entry pCHEAT[256];
 #define sizeofa(array) (sizeof(array)/sizeof(array[0]))
 
 u32 spend_address;
+
+//------------------------------------------------------------------
+// DLAB (Diablo) special case.
+// This 32MB ROM has no padding at the end of the last 0x20000 block: the
+// block ends with the game's boot-time IWRAM image (ROM 0x1FF9E54..0x1FFFE18,
+// copied to 0x03000000 by the crt0) and the EWRAM header mirror, so the
+// normal stub position would overwrite live game code/data.
+// The IWRAM image contains a 0xE53 byte run of 0x00 at ROM 0x1FFA8A8
+// (IWRAM 0x03000A54), which is used to store the RTS stub instead.  The crt0
+// copy loop is redirected to a small "post copy" routine that is stored behind
+// the stub; it clears the copied IWRAM range again (the original bytes are
+// zero) and then continues to the game's main entry.  The routine is kept
+// outside of the normal stub, so ROMs of all other games are patched with
+// exactly the same bytes as before.
+#define DLAB_GAMECODE        0x42414C44
+#define DLAB_TRIM            0x1FFA8A8
+#define DLAB_IWRAM_DST       0x03000A54
+#define DLAB_IWRAM_ZERO_END  0x030018A8
+#define DLAB_ENTRY_MAIN      0x08019554
+#define DLAB_CRT0_LITERAL    0x16C
+#define DLAB_MAX_CHEAT_COUNT 36   //0xD2C byte stub + 36*8 fit in the 0xE53 byte zero run
+
+void Add2(u32 anOffset, u32 aValue);
+
+static u32 is_DLAB_patch;
+
+//1 = RTS_only stub, 2 = RTS+cheat stub, 3 = sleep/reset stub
+static u32 DLAB_stub_mode(void)
+{
+	if((gl_rts_on==1) && (gl_cheat_on==0) && (gl_reset_on==0) && (gl_sleep_on==0))
+	{
+		return 1;
+	}
+	if((gl_rts_on==1) || ((gl_cheat_on==1) && (gl_cheat_count>0)))
+	{
+		return 2;
+	}
+	return 3;//sleep/reset stub
+}
+
+//length of the blob that is written at iTrimSize for the selected stub
+static u32 DLAB_stub_len(void)
+{
+	u32 mode = DLAB_stub_mode();
+	if(mode==1)
+	{
+		return (u32)RTS_only_ReplaceIRQ_end - (u32)RTS_only_ReplaceIRQ_start;
+	}
+	if(mode==3)
+	{
+		return (u32)Sleep_ReplaceIRQ_end - (u32)Sleep_ReplaceIRQ_start;
+	}
+	return (u32)no_CHEAT_end - (u32)RTS_ReplaceIRQ_start;
+}
+
+//post copy routine and its three word slots; it lives behind the stub section
+//so that non-DLAB games keep writing the very same bytes as before
+static u32 DLAB_post_len(void)
+{
+	u32 mode = DLAB_stub_mode();
+	if(mode==1)
+	{
+		return ((u32)RTS_only_post_slots + 12) - (u32)RTS_only_post_copy;
+	}
+	if(mode==3)
+	{
+		return ((u32)Sleep_post_slots + 12) - (u32)Sleep_post_copy;
+	}
+	return ((u32)RTS_post_slots + 12) - (u32)RTS_post_copy;
+}
+
+static const u8* DLAB_post_source(void)
+{
+	u32 mode = DLAB_stub_mode();
+	if(mode==1)
+	{
+		return (const u8*)RTS_only_post_copy;
+	}
+	if(mode==3)
+	{
+		return (const u8*)Sleep_post_copy;
+	}
+	return (const u8*)RTS_post_copy;
+}
+
+//ROM offset (relative to iTrimSize) where the post copy blob is stored:
+//right behind the stub and the optional cheat table
+static u32 DLAB_post_offset(void)
+{
+	u32 off = DLAB_stub_len();
+	if(DLAB_stub_mode()==2)
+	{
+		off += gl_cheat_count * 8;
+	}
+	return off;
+}
+
+static void DLAB_fill_post_slots(u8* post,u32 copysize)
+{
+	u32 off;
+	u32 mode = DLAB_stub_mode();
+	u32 zero_end = DLAB_IWRAM_DST + ((copysize+3)&~3);
+	if(zero_end > DLAB_IWRAM_ZERO_END)
+	{
+		zero_end = DLAB_IWRAM_ZERO_END;
+	}
+	if(mode==1)
+	{
+		off = (u32)RTS_only_post_slots - (u32)RTS_only_post_copy;
+	}
+	else if(mode==3)
+	{
+		off = (u32)Sleep_post_slots - (u32)Sleep_post_copy;
+	}
+	else
+	{
+		off = (u32)RTS_post_slots - (u32)RTS_post_copy;
+	}
+	*(vu32*)(post+off)   = DLAB_IWRAM_DST;
+	*(vu32*)(post+off+4) = zero_end;
+	*(vu32*)(post+off+8) = DLAB_ENTRY_MAIN;
+}
+
+//append the post copy blob behind the stub (and cheat table) in patchbuffer
+static void DLAB_install_post(u8* patchbuffer,u32 copysize)
+{
+	u32 off = DLAB_post_offset();
+	u32 len = DLAB_post_len();
+	if(off+len > copysize) return;
+	dmaCopy((void*)DLAB_post_source(), patchbuffer+off, len);
+	DLAB_fill_post_slots(patchbuffer+off, copysize);
+}
+
+//called once the ROM (or its first block) is visible: relocate the stub into
+//the zero run of the IWRAM image and redirect the crt0 copy tail.
+static void DLAB_prepare(u32* Data)
+{
+	if(*(u32*)GAMECODE != DLAB_GAMECODE) return;
+	if(DLAB_stub_mode()==0) return;//no stub selected, nothing to relocate
+	if(Data[0x160/4] != 0x09FF9E54) return;
+	if(Data[0x164/4] != 0x03000000) return;
+	if(Data[0x168/4] != 0x03005FC4) return;
+	if(Data[0x16C/4] != DLAB_ENTRY_MAIN) return;
+	if(gl_cheat_count > DLAB_MAX_CHEAT_COUNT)
+	{
+		gl_cheat_count = DLAB_MAX_CHEAT_COUNT;
+	}
+	is_DLAB_patch = 1;
+	iTrimSize = DLAB_TRIM;
+	{
+		//Add2() adds g_Offset, which is only meaningful while scanning a NOR
+		//block; the crt0 literal lives at a fixed ROM offset.
+		u32 saved_offset = g_Offset;
+		g_Offset = 0;
+		Add2(DLAB_CRT0_LITERAL/4, 0x08000000 + DLAB_TRIM + DLAB_post_offset());
+		g_Offset = saved_offset;
+	}
+}
 //------------------------------------------------------------------
 void Write(u32 romaddress, const u8* buffer, u32 size)
 {
@@ -419,7 +577,17 @@ void Patch_Reset_Sleep(u32 *Data)
   	*(vu32*)(patchbuffer+Sleep_key_offset) = sleep_key&0x3FF;	
   }
 
-	Write(iTrimSize, patchbuffer, p_patch_end-p_patch_start);
+	u32 copysize = p_patch_end - p_patch_start;
+	if(is_DLAB_patch){
+		copysize += DLAB_post_len();
+	}
+	if(	iTrimSize+copysize > 0x2000000){
+		copysize = 0x2000000 - iTrimSize;
+	}
+	if(is_DLAB_patch){
+		DLAB_install_post(patchbuffer,copysize);
+	}
+	Write(iTrimSize, patchbuffer, copysize);
 }
 //------------------------------------------------------------------
 void Patch_RTS_Cheat(u32 *Data)
@@ -490,8 +658,14 @@ void Patch_RTS_Cheat(u32 *Data)
 	u32 copysize = p_no_cheat_end-p_patch_start ;
 	copysize = copysize +  gl_cheat_count*8;
 	
+	if(is_DLAB_patch){
+		copysize += DLAB_post_len();
+	}
 	if(	iTrimSize+copysize > 0x2000000){
 		copysize = 0x2000000 - iTrimSize;
+	}
+	if(is_DLAB_patch){
+		DLAB_install_post(patchbuffer,copysize);
 	}
 	//DEBUG_printf("iTrimSize =%x %x", iTrimSize,copysize);
 		
@@ -534,8 +708,14 @@ void Patch_RTS_only(u32 *Data)
 
 	u32 copysize = p_patch_end - p_patch_start ;
 	
+	if(is_DLAB_patch){
+		copysize += DLAB_post_len();
+	}
 	if(	iTrimSize+copysize > 0x2000000){
 		copysize = 0x2000000 - iTrimSize; //????
+	}
+	if(is_DLAB_patch){
+		DLAB_install_post(patchbuffer,copysize);
 	}
 	//DEBUG_printf("iTrimSize =%x %x", iTrimSize,copysize);
 		
@@ -619,6 +799,7 @@ void GBApatch_PSRAM(u32* address,int filesize)//Only once
 	is_NORpatch = 0;
 	EA_offset = address[0] & 0xFFFFFF;
 	
+	DLAB_prepare(address);
 	CheckNes(address);
 	PatchNes(address);
 	PatchDragonBallZ(address);
@@ -661,6 +842,7 @@ void GBApatch_NOR(u32* address,int filesize,u32 offset)
   {
 	  CheckNes(address);
 	  EA_offset = address[0] & 0xFFFFFF;
+	  DLAB_prepare(address);
 	  
 		u32 B_install_handler;
 		B_install_handler = 0xEA000000|((iTrimSize-8)/4);
