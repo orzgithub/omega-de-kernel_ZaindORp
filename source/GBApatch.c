@@ -1064,6 +1064,8 @@ void Make_pat_file(TCHAR* gamefilename)
 			w_buffer[11] = gl_cheat_on;
 					
 			res=f_write(&gfile, (void*)w_buffer, sizeof(w_buffer), (UINT*)&written);
+			f_lseek(&gfile, (u32)sizeof(iPatchInfo2)+sizeof(w_buffer));
+			f_truncate(&gfile);
 			f_close(&gfile);
 		}
 	}

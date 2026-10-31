@@ -3125,6 +3125,7 @@ re_show_menu:
 		else if(keysup & KEY_B)
 		{
 			gl_cheat_count = 0;
+			gl_cheat_sel_count = 0;
 			if(play_re!=0xBB){
 				strncpy(currentpath, currentpath_temp, 256);//
 			}
@@ -3298,19 +3299,8 @@ re_show_menu:
 						}
 					}	
 					gl_ic_active = 0;
-					if(gl_cheat_on==1)
-					{
-						gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
-					}
-					if(gl_ic_active==1)
-					{//the instant cheat payload replaces the .pat cache
-						have_pat = 0;
-					}
-					else
-					{
-						ShowbootProgress(gl_check_pat);
-						have_pat = Check_pat(pfilename);
-					}
+					ShowbootProgress(gl_check_pat);
+					have_pat = Check_pat(pfilename);
 
 					if(have_pat==1)	
 					{			
@@ -3325,21 +3315,14 @@ re_show_menu:
 						f_read(&gfile, pReadCache, 0x20000, (UINT*)&ret);
 						f_close(&gfile);
 						SetTrimSize(pReadCache,gamefilesize,0x20000,0x0,SAVEMODE);						
-						if(gl_ic_active==1)
-						{//put the stub and its payload into the block behind the rom
-							iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
-						}
-						if((gl_ic_active==1) || (gl_engine_sel==0) || (gl_select_lang == 0xE2E2))
+						if((gl_engine_sel==0) || (gl_select_lang == 0xE2E2))
 						{	
 								get_find:		
 			    		FAT_table_buffer[0x1F4/4] = SET_PARAMETER_MODE;
 							Send_FATbuffer(FAT_table_buffer,1);												
 			    		res=Loadfile2PSRAM(pfilename);
-							if(gl_ic_active==0)
-							{
-								ShowbootProgress(gl_make_pat);
-								Make_pat_file(pfilename);
-							}
+							ShowbootProgress(gl_make_pat);
+							Make_pat_file(pfilename);
 						}
 						else 
 						{
@@ -3354,8 +3337,11 @@ re_show_menu:
 			    		}
 						}
 					}	
+					//build the cheat payload after every drawing that could touch VRAM,
+					//then put the stub behind the rom image
+					if(gl_cheat_on==1) gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
+					if(gl_ic_active==1) iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
 	    		Patch_SpecialROM_sleepmode();//
-	    		if(gl_ic_active==1) InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);//rebuild payload after rom load
 	    		GBApatch_PSRAM(PSRAMBase_S98,gamefilesize);																																			
 				}
 				else{//no select switch ,CLEAN
@@ -3395,10 +3381,6 @@ re_show_menu:
 	    	{
 	    		Patch_SpecialROM_sleepmode();//
 					gl_ic_active = 0;
-					if(gl_cheat_on==1)
-					{
-						gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
-					}
       				
 					//get the location of the patch
 					res = f_open(&gfile,pfilename, FA_READ);	
@@ -3407,14 +3389,14 @@ re_show_menu:
 						f_read(&gfile, pReadCache, 0x20000, (UINT*)&ret);
 						f_close(&gfile);
 						SetTrimSize(pReadCache,gamefilesize,0x20000,0x1,SAVEMODE);
-						if(gl_ic_active==1)
-						{//the extra block behind the rom holds the stub and payload
-							iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
-						}
+					}
+					if(gl_cheat_on==1) gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
+					if(gl_ic_active==1)
+					{//the extra block behind the rom holds the stub and payload
+						iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
 					}
 					needpatch = 1;
 				}
-				if(gl_ic_active==1) InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);//rebuild payload after trim
 				res = Loadfile2NOR(pfilename, gl_norOffset,needpatch,SAVEMODE);
 				//wait_btn();	
 				if(res==0)

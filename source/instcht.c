@@ -21,9 +21,9 @@
 #include <string.h>
 
 #include "ezkernel.h"
-#include "GBApatch.h"
 #include "showcht.h"
 #include "set_flag.h"
+#include "GBApatch.h"
 
 extern FIL gfile;
 extern TCHAR currentpath[];
@@ -61,6 +61,7 @@ static u8* ic_e;
 static u8 ic_section[64];	//current [section] title, without the brackets
 static u32 ic_slen;
 static u32 ic_skip_section;	//inside [GameInfo]: no cheats there
+static u32 ic_sel;	//current [section] was selected in the cheat window
 
 static vu16* const ic_codes = (vu16*)IC_WORK;
 
@@ -311,6 +312,7 @@ static void ic_build(u8* p,u8* e)
 	ic_names = 0;
 	ic_slen = 0;
 	ic_skip_section = 0;
+	ic_sel = 0;
 
 	while(ic_p<ic_e)
 	{
@@ -348,10 +350,11 @@ static void ic_build(u8* p,u8* e)
 				q++;
 			}
 			ic_skip_section = (ic_slen==8 && memcmp(ic_section,"GameInfo",8)==0);
+			ic_sel = Cheat_SectionSelected(ic_section,ic_slen);
 			while(ic_p<ic_e && *ic_p!='\n') ic_p++;
 			continue;
 		}
-		if(ic_skip_section)
+		if(ic_skip_section || ic_sel==0)
 		{
 			while(ic_p<ic_e && *ic_p!='\n') ic_p++;
 			continue;

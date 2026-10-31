@@ -555,6 +555,32 @@ unsigned long str2hex( char*str)
 	return sum;
 }
 //------------------------------------------------------------------
+u32 gl_cheat_sel_count;
+u32 gl_cheat_sel_hash[32];
+
+u32 Cheat_SectionHash(const u8* s,u32 len)
+{
+	u32 h = 2166136261u;
+	u32 i;
+	for(i=0;i<len;i++)
+	{
+		u8 c = s[i];
+		if(c==' ') continue;
+		h ^= c;
+		h *= 16777619u;
+	}
+	return h;
+}
+
+u32 Cheat_SectionSelected(const u8* s,u32 len)
+{
+	u32 h = Cheat_SectionHash(s,len);
+	u32 i;
+	for(i=0;i<gl_cheat_sel_count;i++)
+		if(gl_cheat_sel_hash[i]==h) return 1;
+	return 0;
+}
+//------------------------------------------------------------------
 void Analyze_KEYVAL(FIL* file,u32 total)
 {
 	u32 tol,i;
@@ -572,6 +598,7 @@ void Analyze_KEYVAL(FIL* file,u32 total)
 	
 	//DEBUG_printf("total %x  ",total);
 	gl_cheat_count=0;
+	gl_cheat_sel_count=0;
 		
 	if(total)
 	{		
@@ -585,6 +612,15 @@ void Analyze_KEYVAL(FIL* file,u32 total)
 			while(((FM_CHT_LINE*)pCHTbuffer)[current_select].is_section != 1)						
 			{
 				current_select--;
+			}
+			{
+				//remember which sections are in use: the instant cheat stub
+				//takes every item of a selected section
+				FM_CHT_LINE* sec = &((FM_CHT_LINE*)pCHTbuffer)[current_select];
+				u32 h = Cheat_SectionHash((u8*)sec->LINEname,(u32)strlen(sec->LINEname));
+				u32 k;
+				for(k=0;k<gl_cheat_sel_count;k++) if(gl_cheat_sel_hash[k]==h) break;
+				if(k==gl_cheat_sel_count && gl_cheat_sel_count<32) gl_cheat_sel_hash[gl_cheat_sel_count++] = h;
 			}
 			//DEBUG_printf("section %s  ", ((FM_CHT_LINE*)pCHTbuffer)[current_select].LINEname);										
 			buflen= Get_CHT_val(&gfile,((FM_CHT_LINE*)pCHTbuffer)[current_select].LINEname,((FM_CHT_LINE*)pCHTbuffer)[tol].LINEname);
