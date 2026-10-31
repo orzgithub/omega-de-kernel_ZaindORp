@@ -1277,6 +1277,15 @@ u8 Get_saveMODE(u8 Save_num,u32 gamefilesize)
 	return saveMODE;
 }
 //---------------------------------------------------------------
+//Highest address the patch area may reach. EEPROM games can not get
+//past 16MB, everything else can use the whole 32MB window.
+static u32 Patch_tail_limit(u32 filesize,u32 saveMODE)
+{
+	if((saveMODE==0x21)||((saveMODE==0x22)&&(filesize<=0x1000000)))
+		return 0x1000000;
+	return 0x2000000;
+}
+//---------------------------------------------------------------
 u32 IWRAM_CODE Loadfile2PSRAM(TCHAR *filename)
 {
 	UINT  ret;
@@ -3337,10 +3346,14 @@ re_show_menu:
 			    		}
 						}
 					}	
-					//build the cheat payload after every drawing that could touch VRAM,
-					//then put the stub behind the rom image
+					//build the cheat payload after every drawing that could touch VRAM
 					if(gl_cheat_on==1) gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
-					if(gl_ic_active==1) iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
+					if(gl_ic_active==1)
+					{
+						u32 need = InstantCheat_PatchSize();
+						if((iTrimSize+need)>Patch_tail_limit(gamefilesize,SAVEMODE))
+							gl_ic_active = 0;//not enough room in the tail: fall back to the old cheat patch
+					}
 	    		Patch_SpecialROM_sleepmode();//
 	    		GBApatch_PSRAM(PSRAMBase_S98,gamefilesize);																																			
 				}
@@ -3392,8 +3405,10 @@ re_show_menu:
 					}
 					if(gl_cheat_on==1) gl_ic_active = InstantCheat_Prepare(pfilename,gamefilesize,SAVEMODE);
 					if(gl_ic_active==1)
-					{//the extra block behind the rom holds the stub and payload
-						iTrimSize = (gamefilesize + 0x1FFFF) & ~0x1FFFF;
+					{
+						u32 need = InstantCheat_PatchSize();
+						if((iTrimSize+need)>Patch_tail_limit(gamefilesize,SAVEMODE))
+							gl_ic_active = 0;//no room in the tail: fall back to the old cheat patch
 					}
 					needpatch = 1;
 				}

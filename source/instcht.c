@@ -13,8 +13,9 @@
 // offers a menu (RESET / SAVE / LOAD / CODES) where each item can be toggled
 // individually.
 //
-// Only used for ROMs <= 16MB with a non EEPROM save type, where there is
-// enough room behind the ROM image.
+// Used whenever the patch (stub + payload) still fits in the area the boot
+// code chose for it (tail padding, or the page behind the ROM image); if it
+// does not fit, the game silently keeps the old whole-list cheat patch.
 //------------------------------------------------------------------
 #include <gba_base.h>
 #include <stdio.h>
@@ -35,19 +36,29 @@ unsigned char HexToChar(unsigned char bChar);
 u32 Change2cht_folder(u32 chtname);
 
 //payload layout, must match source/gba_instant_cheat.s
+//header:
+//  0x00 u32 'ICHT'
+//  0x04 u32 item count
+//  0x08 u32 entry count
+//  0x0C u32 glyph count
+//  0x10 u32 items offset
+//  0x14 u32 entry address table offset
+//  0x18 u32 entry value table offset
+//  0x1C u32 glyph width bitmap offset
+//  0x20 u32 glyph bitmap offset
+//  0x24 u32 name blob offset
+//all sections are packed right after each other, so no matter how many
+//cheats a game has only the bytes that are really used get reserved.
 #define IC_BASE		0x06014000
 #define IC_WORK		0x06012C00
 
-#define PL_ITEMS	0x0010
-#define PL_ENTRIES	0x0210
-#define PL_WIDTHS	0x1210
-#define PL_GLYPHS	0x1410
-#define PL_NAMES	0x2C10
+#define PL_HDR		0x0028
 #define PL_END		0x3400
 
 #define IC_MAX_ITEMS	48
 #define IC_MAX_ENTRIES	512
-#define IC_MAX_GLYPHS	256
+#define IC_MAX_GLYPHS	255	//0xFF ends a name
+#define IC_MAX_NAMES	0x800
 
 u32 gl_ic_active;
 u32 gl_ic_length;
@@ -55,7 +66,14 @@ u32 gl_ic_length;
 static u32 ic_items;
 static u32 ic_entries;
 static u32 ic_glyphs;
-static u32 ic_names;	//in u16 units, from PL_NAMES
+static u32 ic_names;	//name blob size in bytes
+static u32 ic_count;	//1: count only, 0: write the payload
+static u32 ic_o_items;
+static u32 ic_o_addrs;
+static u32 ic_o_vals;
+static u32 ic_o_widths;
+static u32 ic_o_glyphs;
+static u32 ic_o_names;
 static u8* ic_p;
 static u8* ic_e;
 static u8 ic_section[64];	//current [section] title, without the brackets
@@ -74,6 +92,17 @@ static void ic_w16(u32 off,u16 v)
 static void ic_w32(u32 off,u32 v)
 {
 	*(vu32*)(IC_BASE+off) = v;
+}
+
+//VRAM only accepts 16 bit writes, so single bytes are patched into the
+//halfword that contains them
+static void ic_w8(u32 off,u8 v)
+{
+	vu16* p = (vu16*)(IC_BASE+(off&~1u));
+	u16 cur = *p;
+	if(off&1) cur = (u16)((cur&0x00FF) | ((u16)v<<8));
+	else cur = (u16)((cur&0xFF00) | (u16)v);
+	*p = cur;
 }
 
 static int ic_hex(u8 c)
@@ -119,14 +148,31 @@ static int ic_glyph(u16 code)
 		w = 12;
 	}
 
-	for(r=0;r<12;r++) *(vu16*)(IC_BASE+PL_GLYPHS+ic_glyphs*24+r*2) = rows[r];
-	ic_w16(PL_WIDTHS+ic_glyphs*2,(u16)w);
+	if(ic_count==0)
+	{
+		u8* dst = (u8*)(IC_BASE+ic_o_glyphs+ic_glyphs*24);
+		for(r=0;r<12;r++) *(vu16*)(dst+r*2) = rows[r];
+		if(w==12)
+		{
+			u32 bo = ic_o_widths+(ic_glyphs>>3);
+			u8 bit = (u8)(1<<(ic_glyphs&7));
+			u8 cur = 0;
+			//RMW through the 16 bit helper
+			{
+				vu16* p = (vu16*)(IC_BASE+(bo&~1u));
+				u16 hw = *p;
+				cur = (bo&1) ? (u8)(hw>>8) : (u8)hw;
+				cur |= bit;
+			}
+			ic_w8(bo,cur);
+		}
+	}
 	ic_codes[ic_glyphs] = code;
 	return (int)ic_glyphs++;
 }
 
 //------------------------------------------------------------------
-//append a name (GBK or ASCII) to the name blob, returns new unit count
+//append a name (GBK or ASCII) to the name blob, returns new byte count
 static u32 ic_name(u8* k,u8* ke,u32 n)
 {
 	while(k<ke)
@@ -139,8 +185,8 @@ static u32 ic_name(u8* k,u8* ke,u32 n)
 		if(code==0) break;
 		g = ic_glyph(code);
 		if(g<0) continue;
-		if((PL_NAMES + n*2 + 4) > PL_END) break;
-		ic_w16(PL_NAMES+n*2,(u16)g);
+		if(n>=IC_MAX_NAMES) break;
+		if(ic_count==0) ic_w8(ic_o_names+n,(u8)g);
 		n++;
 	}
 	return n;
@@ -164,15 +210,19 @@ static u32 ic_name_section(u32 n)
 		if(code==' ') continue;
 		g = ic_glyph(code);
 		if(g<0) continue;
-		if((PL_NAMES + n*2 + 4) > PL_END) break;
-		ic_w16(PL_NAMES+n*2,(u16)g);
+		if(n>=IC_MAX_NAMES) break;
+		if(ic_count==0) ic_w8(ic_o_names+n,(u8)g);
 		n++;
 		cells += (code<0x80)?1:2;
 	}
 	if(n>0)
 	{
 		int g = ic_glyph((u16)' ');
-		if(g>=0 && (PL_NAMES + n*2 + 4) <= PL_END){ ic_w16(PL_NAMES+n*2,(u16)g); n++; }
+		if(g>=0 && n<IC_MAX_NAMES)
+		{
+			if(ic_count==0) ic_w8(ic_o_names+n,(u8)g);
+			n++;
+		}
 	}
 	return n;
 }
@@ -211,15 +261,15 @@ static void ic_add_item(u8* ks,u8* ke,u8* vs,u8* ve)
 			}
 			else if(ic_entries<IC_MAX_ENTRIES)
 			{
-				u32 off = PL_ENTRIES + ic_entries*8;
-				u32 t;
 				//.cht addresses are relative to the EWRAM/IWRAM window: rebase
 				//them exactly like the old cheat patch does
-				t = (addr>=0x40000) ? ((addr&0x7FFF)+0x03000000)
-				                    : ((addr&0x3FFFF)+0x02000000);
-				ic_w32(off,t);
-				ic_w16(off+4,(u16)(v&0xFF));
-				ic_w16(off+6,0);
+				u32 t = (addr>=0x40000) ? ((addr&0x7FFF)+0x03000000)
+				                        : ((addr&0x3FFFF)+0x02000000);
+				if(ic_count==0)
+				{
+					*(vu32*)(IC_BASE+ic_o_addrs+ic_entries*4) = t;
+					ic_w8(ic_o_vals+ic_entries,(u8)(v&0xFF));
+				}
 				ic_entries++;
 				addr++;
 			}
@@ -248,27 +298,30 @@ static void ic_add_item(u8* ks,u8* ke,u8* vs,u8* ve)
 		{
 			g = ic_glyph((u16)('0'+(v/10)));
 			if(g<0){ ic_entries = first_entry; return; }
-			ic_w16(PL_NAMES+n*2,(u16)g);
+			if(ic_count==0) ic_w8(ic_o_names+n,(u8)g);
 			n++;
 		}
 		g = ic_glyph((u16)('0'+(v%10)));
 		if(g<0){ ic_entries = first_entry; return; }
-		ic_w16(PL_NAMES+n*2,(u16)g);
+		if(ic_count==0) ic_w8(ic_o_names+n,(u8)g);
 		n++;
 	}
 	else
 	{
 		n = n1;
 	}
-	if((PL_NAMES + n*2 + 2) > PL_END){ ic_entries = first_entry; return; }
-	ic_w16(PL_NAMES+n*2,0xFFFF);
+	if(n>=IC_MAX_NAMES){ ic_entries = first_entry; return; }
+	if(ic_count==0) ic_w8(ic_o_names+n,0xFF);
 
 	{
-		u32 off = PL_ITEMS + ic_items*8;
-		ic_w16(off+0,(u16)((PL_NAMES/2)+n0));
-		ic_w16(off+2,(u16)first_entry);
-		ic_w16(off+4,(u16)(ic_entries-first_entry));
-		ic_w16(off+6,0);
+		u32 off = ic_o_items + ic_items*8;
+		if(ic_count==0)
+		{
+			ic_w16(off+0,(u16)n0);
+			ic_w16(off+2,(u16)first_entry);
+			ic_w16(off+4,(u16)(ic_entries-first_entry));
+			ic_w16(off+6,0);
+		}
 	}
 	ic_names = n+1;
 	ic_items++;
@@ -302,7 +355,7 @@ static u8* ic_value_end(u8* p)
 }
 
 //------------------------------------------------------------------
-static void ic_build(u8* p,u8* e)
+static void ic_build_once(u8* p,u8* e)
 {
 	ic_p = p;
 	ic_e = e;
@@ -380,16 +433,49 @@ static void ic_build(u8* p,u8* e)
 		ic_add_item(ks,kend,ic_p,ve);
 		ic_p = ve;
 	}
+}
 
-	//header
-	ic_w16(0x00,0x4349);	//'IC'
-	ic_w16(0x02,0x5448);	//'HT'
-	ic_w16(0x04,(u16)ic_items);
-	ic_w16(0x06,0);
-	ic_w16(0x08,(u16)ic_entries);
-	ic_w16(0x0A,0);
-	ic_w16(0x0C,(u16)ic_glyphs);
-	ic_w16(0x0E,0);
+static int ic_build(u8* p,u8* e)
+{
+	u32 total;
+
+	//pass 1: only count items/entries/glyphs/name bytes
+	ic_count = 1;
+	ic_build_once(p,e);
+	if(ic_items==0 || ic_entries==0) return 0;
+
+	//pack the sections right after each other
+	ic_o_items  = PL_HDR;
+	ic_o_addrs  = (ic_o_items + ic_items*8 + 3) & ~3u;
+	ic_o_vals   = ic_o_addrs + ic_entries*4;
+	ic_o_widths = (ic_o_vals + ic_entries + 1) & ~1u;
+	ic_o_glyphs = (ic_o_widths + ((ic_glyphs+7)>>3) + 3) & ~3u;
+	ic_o_names  = ic_o_glyphs + ic_glyphs*24;
+	total = ic_o_names + ic_names;
+	if(total > PL_END) return 0;
+
+	//pass 2: write it
+	ic_count = 0;
+	{
+		u32 n = ((ic_glyphs+7)>>3);
+		u32 i;
+		for(i=0;i<n;i+=2) *(vu16*)(IC_BASE+ic_o_widths+i) = 0;
+	}
+	ic_build_once(p,e);
+	if(ic_items==0 || ic_entries==0) return 0;
+
+	ic_w32(0x00,0x54484349);	//'ICHT'
+	ic_w32(0x04,ic_items);
+	ic_w32(0x08,ic_entries);
+	ic_w32(0x0C,ic_glyphs);
+	ic_w32(0x10,ic_o_items);
+	ic_w32(0x14,ic_o_addrs);
+	ic_w32(0x18,ic_o_vals);
+	ic_w32(0x1C,ic_o_widths);
+	ic_w32(0x20,ic_o_glyphs);
+	ic_w32(0x24,ic_o_names);
+	gl_ic_length = (ic_o_names + ic_names + 3) & ~3;
+	return 1;
 }
 
 //------------------------------------------------------------------
@@ -474,6 +560,12 @@ static int ic_open_cht(TCHAR* gamefilename)
 //------------------------------------------------------------------
 //called before the ROM is loaded/patched, returns 1 when the instant
 //cheat stub can be used
+//bytes needed on the rom for the instant-cheat stub plus its payload
+u32 InstantCheat_PatchSize(void)
+{
+	return ((u32)IC_ReplaceIRQ_end - (u32)IC_ReplaceIRQ_start) + gl_ic_length;
+}
+
 u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode)
 {
 	u32 len;
@@ -484,13 +576,15 @@ u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode)
 	ic_items = 0;
 	ic_glyphs = 0;
 	ic_names = 0;
+	(void)savemode;	//space is checked by the caller (tail or block behind the rom)
 
 	f_chdir(currentpath);
 
 	if(!get_set_custom_info(FLAG_ENHANCED_CHEAT)) goto done;	//custom setting
 	if(filesize==0) goto done;
-	if(filesize>0x1000000) goto done;	//16MB max
-	if(savemode==0x21 || savemode==0x22) goto done;	//no room
+	//Diablo keeps live code in the last kilobytes of the image, it needs the
+	//dedicated DLAB layout, so it keeps the old cheat patch
+	if(*(u32*)GAMECODE==0x42414C44) goto done;
 
 	if(ic_open_cht(gamefilename)==0) goto done;
 
@@ -504,10 +598,7 @@ u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode)
 	}
 	f_close(&gfile);
 
-	ic_build(pReadCache,pReadCache+ret);
-	if(ic_items==0) goto done;
-
-	gl_ic_length = (PL_NAMES + ic_names*2 + 3) & ~3;
+	if(ic_build(pReadCache,pReadCache+ret)==0) goto done;
 	gl_ic_active = 1;
 
 done:

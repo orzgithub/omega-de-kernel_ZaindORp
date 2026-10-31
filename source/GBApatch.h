@@ -75,6 +75,7 @@ extern u32 iTrimSize;
 extern u32 gl_ic_length;
 #define IC_PAYLOAD_BASE 0x06014000
 u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode);
+u32 InstantCheat_PatchSize(void);
 void Patch_RTS_InstantCheat(u32* Data);
 
 

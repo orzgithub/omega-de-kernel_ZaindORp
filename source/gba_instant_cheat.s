@@ -1163,7 +1163,7 @@ icdg_nopix:
 	ldmfd	sp!,{r4-r7,pc}
 
 	.align
-IC_draw_name:	@; r0=name ptr(u16, 0xFFFF end), r1=x, r2=y, r3=color
+IC_draw_name:	@; r0=name ptr(u8 indices, 0xFF end), r1=x, r2=y, r3=color
 	stmfd	sp!,{r4-r11,lr}
 	adrl	r4,IC_payload_ptr
 	ldr		r4,[r4]
@@ -1171,14 +1171,14 @@ IC_draw_name:	@; r0=name ptr(u16, 0xFFFF end), r1=x, r2=y, r3=color
 	mov		r9,r1
 	mov		r10,r2
 	mov		r11,r3
-	add		r6,r4,#0x1400
-	add		r6,r6,#0x10
-	add		r7,r4,#0x1200
-	add		r7,r7,#0x10
+	ldr		r6,[r4,#0x20]	@; glyph bitmap offset
+	add		r6,r6,r4
+	ldr		r7,[r4,#0x1C]	@; glyph width bitmap offset
+	add		r7,r7,r4
 icdn_loop:
-	ldrh	r5,[r8],#2
+	ldrb	r5,[r8],#1
 	cmp		r5,#0xFF
-	bhi		icdn_end
+	beq		icdn_end
 	cmp		r9,#170	@;leave room for the ON/OFF column at x=196
 	bhi		icdn_end
 	mov		r0,r5,lsl #4
@@ -1188,9 +1188,14 @@ icdn_loop:
 	mov		r2,r10
 	mov		r3,r11
 	bl		IC_draw_glyph
-	add		r1,r7,r5,lsl #1
-	ldrh	r1,[r1]
-	add		r9,r9,r1
+	lsr		r0,r5,#3
+	ldrb	r1,[r7,r0]
+	and		r0,r5,#7
+	mov		r1,r1,lsr r0
+	mov		r2,#6
+	tst		r1,#1
+	addne	r2,r2,#6
+	add		r9,r9,r2
 	b		icdn_loop
 icdn_end:
 	ldmfd	sp!,{r4-r11,pc}
@@ -1223,11 +1228,13 @@ icm_row:
 	mov		r6,r4,lsl #4
 	sub		r6,r6,r4
 	add		r6,r6,#32
-	add		r7,r8,#0x10
+	ldr		r7,[r8,#0x10]	@; item table offset
+	add		r7,r7,r8
 	add		r7,r7,r5,lsl #3
-	ldrh	r0,[r7]
-	add		r0,r0,r0
-	add		r0,r8,r0
+	ldrh	r0,[r7]			@; name offset inside the name blob
+	ldr		r1,[r8,#0x24]	@; name blob offset
+	add		r0,r0,r1
+	add		r0,r0,r8
 	mov		r1,#16
 	mov		r2,r6
 	cmp		r5,r11
@@ -1303,14 +1310,20 @@ icm_exit:
 
 @;--------------------------------------------------------
 IC_apply:	@; called from the IRQ handler, writes every enabled item
-	stmfd	sp!,{r4-r9,lr}
+	stmfd	sp!,{r4-r12,lr}
 	adrl	r9,IC_payload_ptr
 	ldr		r9,[r9]
 	cmp		r9,#0
 	beq		ica_done
-	ldr		r8,[r9,#4]
+	ldr		r8,[r9,#4]			@; item count
 	cmp		r8,#0
 	beq		ica_done
+	ldr		r10,[r9,#0x10]		@; item table
+	add		r10,r10,r9
+	ldr		r11,[r9,#0x14]		@; entry address table
+	add		r11,r11,r9
+	ldr		r12,[r9,#0x18]		@; entry value table
+	add		r12,r12,r9
 	mov		r7,#0
 ica_item:
 	cmp		r7,r8
@@ -1322,25 +1335,24 @@ ica_item:
 	mov		r1,r1,lsr r0
 	tst		r1,#1
 	beq		ica_next
-	add		r6,r9,#0x10
-	add		r6,r6,r7,lsl #3
-	ldrh	r4,[r6,#2]
-	ldrh	r5,[r6,#4]
-	add		r6,r9,#0x210
-	add		r6,r6,r4,lsl #3
+	add		r6,r10,r7,lsl #3
+	ldrh	r4,[r6,#2]			@; first entry
+	ldrh	r5,[r6,#4]			@; entry count
+	add		r0,r11,r4,lsl #2
+	add		r1,r12,r4
 ica_ent:
 	cmp		r5,#0
 	beq		ica_next
-	ldr		r0,[r6],#4
-	ldr		r1,[r6],#4
-	strb	r1,[r0]
+	ldr		r2,[r0],#4
+	ldrb	r3,[r1],#1
+	strb	r3,[r2]
 	sub		r5,r5,#1
 	b		ica_ent
 ica_next:
 	add		r7,r7,#1
 	b		ica_item
 ica_done:
-	ldmfd	sp!,{r4-r9,pc}
+	ldmfd	sp!,{r4-r12,pc}
 
 	.ltorg
 	.align
