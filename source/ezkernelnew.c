@@ -3352,7 +3352,20 @@ re_show_menu:
 					{
 						u32 need = InstantCheat_PatchSize();
 						if((iTrimSize+need)>Patch_tail_limit(gamefilesize,SAVEMODE))
-							gl_ic_active = 0;//not enough room in the tail: fall back to the old cheat patch
+						{
+							if(have_pat==1)
+							{//stale .pat: its iTrimSize does not leave room for the current payload
+							 //shrink the trim size, reload the rom and rebuild the cache with the new iTrimSize
+								have_pat = 0;
+								iTrimSize = (Patch_tail_limit(gamefilesize,SAVEMODE)-need) & 0xFFFFFFF0;
+								if(iTrimSize < 0x400) iTrimSize = 0x400;
+								FAT_table_buffer[0x1F4/4] = SET_PARAMETER_MODE;
+								Send_FATbuffer(FAT_table_buffer,1);
+								Loadfile2PSRAM(pfilename);
+								Make_pat_file(pfilename);
+							}
+							else gl_ic_active = 0;//not enough room in the tail: fall back to the old cheat patch
+						}
 					}
 	    		Patch_SpecialROM_sleepmode();//
 	    		GBApatch_PSRAM(PSRAMBase_S98,gamefilesize);																																			

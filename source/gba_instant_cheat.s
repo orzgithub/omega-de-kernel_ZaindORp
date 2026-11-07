@@ -455,6 +455,15 @@ restore2_IO:        @; IOaddress, offset
 @;------------------------------------------------------
 ingamemenu_now:
 	stmfd	sp!,{r0-r12,lr}
+	@;--- snapshot GAME io (0x000-0x3FF) before any menu clobber ---
+	ldr	r0,=0x04000000
+	ldr	r1,=0x06012C00
+	mov	r2,#0x200
+icl_snap:
+	ldrh	r3,[r0],#2
+	strh	r3,[r1],#2
+	subs	r2,r2,#1
+	bne	icl_snap
 	
 	mov 	r7,#0x4000000
 	add 	r1,r7,#REG_SOUND1CNT_L
@@ -722,7 +731,7 @@ wram_2000000:
 	
 	@;04000000-040003FE   I/O Registers
 	ldr r0,=0x0E009000
-	mov r1,#0x4000000
+	ldr r1,=0x06012C00			@;game io snapshot
 	mov r2,#0x60					@;0x0-0x60
 	bl 	WriteSram
 	
@@ -735,8 +744,7 @@ wram_2000000:
 	bl 		WriteSram		
 	
 	ldr r0,=0x0E009090
-	mov r1,#0x4000000
-	add r1,#0x90          @;0x90-0x3FE
+	ldr r1,=0x06012C90			@;game io snapshot+0x90
 	mov r2,#0x370
 	bl 	WriteSram
 	
@@ -901,6 +909,10 @@ spin3_load:
 	ldrh 	r1,[r0,#REG_VCOUNT]
 	cmp 	r1,#160
 	bne 	spin3_load  
+	
+	add	r2,r0,#0x200			@;IME=1 fallback (old saves carry menu io)
+	mov	r3,#1
+	strh	r3,[r2,#8]
 	
 	adrl	r12, spend_0x80
 	ldr		r12,[r12] 
