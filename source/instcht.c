@@ -49,11 +49,11 @@ u32 Change2cht_folder(u32 chtname);
 //  0x24 u32 name blob offset
 //all sections are packed right after each other, so no matter how many
 //cheats a game has only the bytes that are really used get reserved.
-#define IC_BASE		0x06014000
+#define IC_BASE		IC_PAYLOAD_BASE
 #define IC_WORK		0x06012C00
 
 #define PL_HDR		0x0028
-#define PL_END		0x3400
+#define PL_END		0x2000
 
 #define IC_MAX_ITEMS	48
 #define IC_MAX_ENTRIES	512
@@ -442,7 +442,7 @@ static int ic_build(u8* p,u8* e)
 	//pass 1: only count items/entries/glyphs/name bytes
 	ic_count = 1;
 	ic_build_once(p,e);
-	if(ic_items==0 || ic_entries==0) return 0;
+	if(ic_items>=IC_MAX_ITEMS) return 0;
 
 	//pack the sections right after each other
 	ic_o_items  = PL_HDR;
@@ -462,7 +462,7 @@ static int ic_build(u8* p,u8* e)
 		for(i=0;i<n;i+=2) *(vu16*)(IC_BASE+ic_o_widths+i) = 0;
 	}
 	ic_build_once(p,e);
-	if(ic_items==0 || ic_entries==0) return 0;
+	if(ic_items>=IC_MAX_ITEMS) return 0;
 
 	ic_w32(0x00,0x54484349);	//'ICHT'
 	ic_w32(0x04,ic_items);
@@ -561,9 +561,20 @@ static int ic_open_cht(TCHAR* gamefilename)
 //called before the ROM is loaded/patched, returns 1 when the instant
 //cheat stub can be used
 //bytes needed on the rom for the instant-cheat stub plus its payload
+//bytes of the instant-cheat stub that are actually written: the RTS preview
+//renderer lives behind IC_no_preview_end and is only appended when the
+///FLAGS/RTS_PREVIEW option is on.  Everything that needs the stub size (the
+//writer, the .pat cache and the VRAM budget) has to use this one rule.
+u32 InstantCheat_StubSize(void)
+{
+	return gl_rts_preview_on
+		? ((u32)IC_ReplaceIRQ_end - (u32)IC_ReplaceIRQ_start)
+		: ((u32)IC_no_preview_end - (u32)IC_ReplaceIRQ_start);
+}
+
 u32 InstantCheat_PatchSize(void)
 {
-	return ((u32)IC_ReplaceIRQ_end - (u32)IC_ReplaceIRQ_start) + gl_ic_length;
+	return InstantCheat_StubSize() + gl_ic_length;
 }
 
 u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode)

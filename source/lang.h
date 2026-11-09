@@ -106,6 +106,7 @@ extern char* gl_set_custom_save_backup;
 extern char* gl_set_custom_nor_allow_delete_middle;
 extern char* gl_set_custom_transgender_flag;
 extern char* gl_set_custom_enhanced_cheat;
+extern char* gl_set_custom_rts_preview;
 
 extern char* gl_modver;
 

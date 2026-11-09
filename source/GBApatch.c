@@ -442,7 +442,11 @@ void SetTrimSize(u8* buffer,u32 romsize,u32 iSize,u32 mode,BYTE saveMODE)
 	}
 	
 	if(gl_cheat_on==1){
-		PATCH_LENGTH = 0x2000;
+		//the preview renderer is ~4 KB of the stub: with the option off only
+		//IC_no_preview_end-IC_ReplaceIRQ_start (=0x1210) has to fit, so the
+		//reserved tail can shrink by 0xF00. 0x1000 would NOT be enough: the
+		//stub alone is larger than that and would overwrite game data.
+		PATCH_LENGTH = gl_rts_preview_on ? 0x2400 : 0x1500;
 	}
 	
   if(0)
@@ -733,9 +737,11 @@ void Patch_RTS_InstantCheat(u32* Data)
 	u32 Return_address = 0x8000000 + EA_offset*4 + 8;
 
 	u8* p_patch_start = (u8*)IC_ReplaceIRQ_start;
-	u8* p_patch_end   = (u8*)IC_ReplaceIRQ_end;
 	u8* patchbuffer = (u8*)_UnusedVram;
-	u32 patchsize = p_patch_end - p_patch_start;
+	//one size for the whole patch: the preview renderer is only appended
+	//when the RTS preview option is on, so the cheat payload has to start
+	//right behind the part of the stub that is really written
+	u32 patchsize = InstantCheat_StubSize();
 
 	dmaCopy((void*)p_patch_start, patchbuffer, patchsize);
 	*(vu32*)(patchbuffer + ((u8*)IC_Return_address_L - p_patch_start)) = Return_address;
@@ -766,6 +772,7 @@ void Patch_RTS_InstantCheat(u32* Data)
 	}
 
 	*(vu32*)(patchbuffer + ((u8*)IC_switch - p_patch_start)) = gl_rts_on;
+	*(vu32*)(patchbuffer + ((u8*)IC_preview_on - p_patch_start)) = gl_rts_preview_on;
 	*(vu32*)(patchbuffer + ((u8*)IC_payload_ptr - p_patch_start)) = 0x08000000 + iTrimSize + patchsize;
 
 	Write(iTrimSize, patchbuffer, patchsize);
@@ -979,6 +986,16 @@ void GBA_patch_init_buffer(u32* buffer)
 	w_cheat_on = buffer[start+11];
 }
 //------------------------------------------------------------------
+//.pat cache layout: iPatchInfo2 followed by PAT_WORDS u32 words, see
+//Make_pat_file().  PAT_VERSION tags the layout so a cache written by another
+//kernel build (different stub size, different option set) is rebuilt instead
+//of being trusted.
+#define PAT_WORDS		19
+#define PAT_VERSION		0x50415433	//"PAT3"
+#define PAT_PREVIEW		12	//w_buffer[12]: gl_rts_preview_on
+#define PAT_STUB		16	//w_buffer[16]: PAT_VERSION
+#define PAT_SIZE		17	//w_buffer[17]: InstantCheat_StubSize()
+#define PAT_BYTES		(sizeof(iPatchInfo2) + PAT_WORDS*4)
 u32 Check_pat(TCHAR* gamefilename)
 {
 	UINT  ret;
@@ -996,9 +1013,21 @@ u32 Check_pat(TCHAR* gamefilename)
 		if(res == FR_OK)//have a old file
 		{
 			patfilesize = f_size(&gfile);
+			//never read more than one .pat cache worth of data
+			if(patfilesize > PAT_BYTES)
+			{
+				patfilesize = PAT_BYTES;
+			}
 			f_read(&gfile, pReadCache, patfilesize, &ret);
 			f_close(&gfile);
-			find_the_patfile = 1;
+			if( (ret != patfilesize) || (patfilesize < PAT_BYTES) )
+			{
+				find_the_patfile = 0;//truncated cache: rebuild
+			}
+			else
+			{
+				find_the_patfile = 1;
+			}
 		}					
 		else
 		{
@@ -1013,14 +1042,32 @@ u32 Check_pat(TCHAR* gamefilename)
 
 	if(find_the_patfile)
 	{
-		//read patch information
-		GBA_patch_init_buffer((u32*)pReadCache);
-		
-		if( (w_reset_on !=gl_reset_on)  || (w_rts_on !=gl_rts_on)  || (w_sleep_on !=gl_sleep_on) || (w_cheat_on !=gl_cheat_on))
+		u32* patwords = (u32*)pReadCache;
+
+		//the length is checked before anything is read out of the cache: a
+		//short file has no PAT3 tail at all
+		if( (patfilesize < PAT_BYTES) ||
+			(patwords[PAT_STUB] != PAT_VERSION) ||
+			(patwords[PAT_SIZE] != InstantCheat_StubSize()) )
 		{
 			GBA_patch_init();
 			find_the_patfile = 0;
-		}	
+		}
+		else
+		{
+			//read patch information
+			GBA_patch_init_buffer(patwords);
+
+			if( (w_reset_on  != gl_reset_on)  ||
+				(w_rts_on    != gl_rts_on)    ||
+				(w_sleep_on  != gl_sleep_on)  ||
+				(w_cheat_on  != gl_cheat_on)  ||
+				(patwords[PAT_PREVIEW] != gl_rts_preview_on) )
+			{
+				GBA_patch_init();
+				find_the_patfile = 0;
+			}
+		}
 	}
 	else
 	{
@@ -1033,7 +1080,7 @@ void Make_pat_file(TCHAR* gamefilename)
 {
 	u32 res;
 	u32 written;
-	u32 w_buffer[16];
+	u32 w_buffer[PAT_WORDS];
 	
 	res = f_mkdir(PATCH_FOLDER);
 	res=f_chdir(PATCH_FOLDER);
@@ -1062,6 +1109,10 @@ void Make_pat_file(TCHAR* gamefilename)
 			w_buffer[9] = gl_rts_on;
 			w_buffer[10] = gl_sleep_on;
 			w_buffer[11] = gl_cheat_on;
+
+			w_buffer[PAT_PREVIEW] = gl_rts_preview_on;
+			w_buffer[PAT_STUB] = PAT_VERSION;
+			w_buffer[PAT_SIZE] = InstantCheat_StubSize();
 					
 			res=f_write(&gfile, (void*)w_buffer, sizeof(w_buffer), (UINT*)&written);
 			f_lseek(&gfile, (u32)sizeof(iPatchInfo2)+sizeof(w_buffer));

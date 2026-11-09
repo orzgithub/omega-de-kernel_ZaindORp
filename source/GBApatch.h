@@ -70,12 +70,15 @@ extern void IC_Reset_key(void);
 extern void IC_switch(void);
 extern void IC_payload_ptr(void);
 extern void IC_spend_ptr(void);
+extern void IC_no_preview_end(void);
+extern void IC_preview_on(void);
 extern u32 gl_ic_active;
 extern u32 iTrimSize;
 extern u32 gl_ic_length;
-#define IC_PAYLOAD_BASE 0x06014000
+#define IC_PAYLOAD_BASE 0x06016000
 u32 InstantCheat_Prepare(TCHAR* gamefilename,u32 filesize,u32 savemode);
 u32 InstantCheat_PatchSize(void);
+u32 InstantCheat_StubSize(void);
 void Patch_RTS_InstantCheat(u32* Data);
 
 

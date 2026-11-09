@@ -79,6 +79,7 @@ u16 gl_reset_on;
 u16 gl_rts_on;
 u16 gl_sleep_on;
 u16 gl_cheat_on;
+u8 gl_rts_preview_on;
 
 
 u16 gl_auto_save_sel;
@@ -1365,6 +1366,7 @@ void CheckSwitch(void)
 	gl_rts_on = Read_SET_info(assress_v_rts);
 	gl_sleep_on = Read_SET_info(assress_v_sleep);
 	gl_cheat_on = Read_SET_info(assress_v_cheat);
+	gl_rts_preview_on = get_set_custom_info(FLAG_RTS_PREVIEW);
 	if( (gl_reset_on != 0x0) && (gl_reset_on != 0x1))
 	{
 		gl_reset_on = 0x0;
@@ -3289,12 +3291,15 @@ re_show_menu:
 				//wait_btn();
 				SetRompageWithHardReset(0x200,key_L);
 	  		break;
-	    case 1://PSRAM BOOT WITH ADDON
+	    case 1:{//PSRAM BOOT WITH ADDON
+		u32 patch_retried = 0;
 	    	ShowbootProgress(gl_loading_game);
 	    	gl_reset_on = Read_SET_info(assress_v_reset);
 				gl_rts_on 	= Read_SET_info(assress_v_rts);
 				gl_sleep_on = Read_SET_info(assress_v_sleep);
 				gl_cheat_on = Read_SET_info(assress_v_cheat);
+				//read before Check_pat()/SetTrimSize(): both depend on the stub size
+				gl_rts_preview_on = get_set_custom_info(FLAG_RTS_PREVIEW);
 				if((gl_reset_on==1) || (gl_rts_on==1) || (gl_sleep_on==1) || (gl_cheat_on==1))
 				{
 					if(gl_rts_on==1)
@@ -3317,6 +3322,7 @@ re_show_menu:
 					}	
 					else //(have_pat==0)
 					{
+					retry_patch:
 						f_chdir(currentpath);//return to game folder	
 						//get the location for the patch
 						res = f_open(&gfile,pfilename, FA_READ);	
@@ -3353,18 +3359,13 @@ re_show_menu:
 						u32 need = InstantCheat_PatchSize();
 						if((iTrimSize+need)>Patch_tail_limit(gamefilesize,SAVEMODE))
 						{
-							if(have_pat==1)
-							{//stale .pat: its iTrimSize does not leave room for the current payload
-							 //shrink the trim size, reload the rom and rebuild the cache with the new iTrimSize
+							if(patch_retried==0)
+							{//the tail does not hold the current payload: rebuild the patch area once
+								patch_retried = 1;
 								have_pat = 0;
-								iTrimSize = (Patch_tail_limit(gamefilesize,SAVEMODE)-need) & 0xFFFFFFF0;
-								if(iTrimSize < 0x400) iTrimSize = 0x400;
-								FAT_table_buffer[0x1F4/4] = SET_PARAMETER_MODE;
-								Send_FATbuffer(FAT_table_buffer,1);
-								Loadfile2PSRAM(pfilename);
-								Make_pat_file(pfilename);
+								goto retry_patch;
 							}
-							else gl_ic_active = 0;//not enough room in the tail: fall back to the old cheat patch
+							gl_ic_active = 0;//still no room: fall back to the old cheat patch
 						}
 					}
 	    		Patch_SpecialROM_sleepmode();//
@@ -3376,6 +3377,7 @@ re_show_menu:
 				//wait_btn();	
 	    	SetRompageWithHardReset(0x200,key_L);
 	    	break;
+	    }
 	    case 2://WRITE TO NOR CLEAN    	
 	    	f_chdir(currentpath);//return to game folder
 				res = Loadfile2NOR(pfilename, gl_norOffset,0x0,SAVEMODE);
@@ -3400,6 +3402,7 @@ re_show_menu:
 				gl_rts_on = Read_SET_info(assress_v_rts);
 				gl_sleep_on = Read_SET_info(assress_v_sleep);
 				gl_cheat_on = Read_SET_info(assress_v_cheat);
+				gl_rts_preview_on = get_set_custom_info(FLAG_RTS_PREVIEW);
 														
 				f_chdir(currentpath);//return to game folder	
 				u32 needpatch = 0;
